@@ -4,7 +4,7 @@
 
 #include "../NutsBolts.h"      // set_bitnum etc
 #include "../MotionControl.h"  // mc_reset
-#include "../Limits.h"
+#include "../GLimits.h"
 #include "../Protocol.h"  // rtAlarm
 
 #include <esp32-hal-gpio.h>  // CHANGE

@@ -15,7 +15,7 @@
 #include "Report.h"
 #include "MotionControl.h"
 #include "System.h"
-#include "Limits.h"               // homingAxes
+#include "GLimits.h"               // homingAxes
 #include "SettingsDefinitions.h"  // build_info
 #include "Protocol.h"             // LINE_BUFFER_SIZE
 #include "Uart.h"                 // Uart0.write()
@@ -23,6 +23,10 @@
 
 #include <cstring>
 #include <map>
+
+#include "Platform.h"
+Error WEAK_LINK saveYamlOverride(const char *path, const char *value)   { return Error::Ok; }
+void WEAK_LINK clearYamlOverrides() {}
 
 // WG Readable and writable as guest
 // WU Readable and writable as user and admin
@@ -71,6 +75,7 @@ void settings_restore(uint8_t restore_flag) {
                 }
             }
         }
+        clearYamlOverrides();
         log_info("Settings reset done");
     }
     if (restore_flag & SettingsRestore::Parameters) {
@@ -575,7 +580,8 @@ Error do_command_or_setting(const char* key, char* value, WebUI::AuthenticationL
             Configuration::AfterParse afterParseHandler;
             config->afterParse();
             config->group(afterParseHandler);
-
+            if (value)
+                return saveYamlOverride(key,value);
             return Error::Ok;
         }
     } catch (const Configuration::ParseException& ex) {

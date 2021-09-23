@@ -23,7 +23,7 @@
 #include "MotorDriver.h"
 
 #include "../Machine/MachineConfig.h"
-#include "../Limits.h"  // limitsMinPosition
+#include "../GLimits.h"  // limitsMinPosition
 
 namespace MotorDrivers {
     String MotorDriver::axisName() const {

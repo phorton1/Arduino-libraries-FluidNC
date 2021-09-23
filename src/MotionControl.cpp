@@ -7,7 +7,7 @@
 
 #include "Machine/MachineConfig.h"
 #include "Machine/Homing.h"  // run_cycles
-#include "Limits.h"          // limits_soft_check
+#include "GLimits.h"          // limits_soft_check
 #include "Report.h"          // report_over_counter
 #include "Protocol.h"        // protocol_execute_realtime
 #include "Planner.h"         // plan_reset, etc
@@ -326,7 +326,7 @@ GCUpdatePos mc_probe_cycle(float* target, plan_line_data_t* pl_data, uint8_t par
         return GCUpdatePos::None;  // Nothing else to do but bail.
     }
     // Setup and queue probing motion. Auto cycle-start should not start the cycle.
-    log_info("Found");
+    // log_info("Found");
     cartesian_to_motors(target, pl_data, gc_state.position);
     // Activate the probing state monitor in the stepper module.
     probeState = ProbeState::Active;

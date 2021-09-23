@@ -102,4 +102,6 @@ void addPinReport(char* status, char pinLetter);
 extern const char* dataBeginMarker;
 extern const char* dataEndMarker;
 
+void mpos_to_wpos(float* position);
+
 #include "MyIOStream.h"

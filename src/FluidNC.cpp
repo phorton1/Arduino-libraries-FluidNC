@@ -2,14 +2,14 @@
 // Copyright (c) 2018 -	Bart Dring
 // Use of this source code is governed by a GPLv3 license that can be found in the LICENSE file.
 
-#include "Main.h"
+#include "FluidNC.h"
 #include "Machine/MachineConfig.h"
 
 #include "Config.h"
 #include "Report.h"
 #include "Settings.h"
 #include "SettingsDefinitions.h"
-#include "Limits.h"
+#include "GLimits.h"
 #include "Protocol.h"
 #include "System.h"
 #include "Uart.h"
@@ -28,7 +28,7 @@
 
 extern void make_user_commands();
 
-void setup() {
+void main_init() {
     try {
         uartInit();  // Setup serial port
 
@@ -44,6 +44,10 @@ void setup() {
         // because the polling may depend on the config
         client_init();
 
+        if (!SPIFFS.begin(true)) {
+            log_error("Cannot mount the local filesystem");
+        }
+
         display_init();
 
         // Load settings from non-volatile storage
@@ -51,10 +55,6 @@ void setup() {
 
         log_info("FluidNC " << GIT_TAG << GIT_REV);
         log_info("Compiled with ESP32 SDK:" << ESP.getSdkVersion());
-
-        if (!SPIFFS.begin(true)) {
-            log_error("Cannot mount the local filesystem");
-        }
 
         bool configOkay = config->load(config_filename->get());
         make_user_commands();
@@ -165,7 +165,7 @@ static void reset_variables() {
     mc_init();
 }
 
-void loop() {
+void run_once() {
     static int tries = 0;
     try {
         reset_variables();

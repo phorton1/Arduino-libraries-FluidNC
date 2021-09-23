@@ -78,7 +78,7 @@ void heapCheckTask(void* pvParameters) {
 }
 
 // Act upon a realtime character
-static void execute_realtime_command(Cmd command, Print& client) {
+void execute_realtime_command(Cmd command, Print& client) {
     switch (command) {
         case Cmd::Reset:
             log_debug("Cmd::Reset");

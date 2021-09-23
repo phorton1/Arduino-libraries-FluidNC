@@ -80,4 +80,6 @@ public:
 
 void register_client(Stream* client_stream);
 
+void execute_realtime_command(Cmd command, Print& client);
+
 extern AllClients allClients;

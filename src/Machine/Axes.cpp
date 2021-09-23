@@ -6,7 +6,7 @@
 #include "../MotionControl.h"
 #include "../Stepper.h"     // stepper_id_t
 #include "MachineConfig.h"  // config->
-#include "../Limits.h"
+#include "../GLimits.h"
 
 namespace Machine {
     MotorMask Axes::posLimitMask = 0;

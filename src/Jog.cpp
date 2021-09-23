@@ -5,7 +5,7 @@
 #include "Jog.h"
 
 #include "Machine/MachineConfig.h"
-#include "Limits.h"         // limitsCheckTravel
+#include "GLimits.h"         // limitsCheckTravel
 #include "MotionControl.h"  // cartesian_to_motors
 #include "Stepper.h"        // st_prep_buffer, st_wake_up
 

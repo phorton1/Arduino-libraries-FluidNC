@@ -21,7 +21,7 @@
 #include "../System.h"  // mpos_to_steps() etc
 #include "../Pins/LedcPin.h"
 #include "../Pin.h"
-#include "../Limits.h"  // limitsMaxPosition
+#include "../GLimits.h"  // limitsMaxPosition
 #include "RcServoSettings.h"
 #include "../NutsBolts.h"
 

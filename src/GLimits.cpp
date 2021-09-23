@@ -2,7 +2,7 @@
 // Copyright (c) 2018 -	Bart Dring
 // Use of this source code is governed by a GPLv3 license that can be found in the LICENSE file.
 
-#include "Limits.h"
+#include "GLimits.h"
 
 #include "Machine/MachineConfig.h"
 #include "MotionControl.h"  // mc_reset

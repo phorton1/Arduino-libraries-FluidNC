@@ -16,16 +16,6 @@ namespace Configuration {
 
         Print& out_;
 
-        bool is(const char* name) const {
-            if (start_ != nullptr) {
-                auto len    = strlen(name);
-                auto result = !strncasecmp(name, start_, len) && (start_[len] == '\0' || start_[len] == '/');
-                return result;
-            } else {
-                return false;
-            }
-        }
-
     protected:
         void enterSection(const char* name, Configuration::Configurable* value) override;
         bool matchesUninitialized(const char* name) override { return false; }
@@ -48,5 +38,15 @@ namespace Configuration {
         bool isHandled_ = false;
 
         virtual ~RuntimeSetting();
+
+        bool is(const char* name) const {
+            if (start_ != nullptr) {
+                auto len    = strlen(name);
+                auto result = !strncasecmp(name, start_, len) && (start_[len] == '\0' || start_[len] == '/');
+                return result;
+            } else {
+                return false;
+            }
+        }
     };
 }

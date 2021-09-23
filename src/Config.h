@@ -40,7 +40,7 @@ const int BAUD_RATE = 115200;
 //CONFIGURE_EYECATCH_BEGIN (DO NOT MODIFY THIS LINE)
 
 // #define ENABLE_BLUETOOTH  // enable bluetooth -- platformio: pio run -e bt
-// #define ENABLE_WIFI       // enable wifi      -- platformio: pio run -e wifi
+#define ENABLE_WIFI       // enable wifi      -- platformio: pio run -e wifi
 
 // Warning! The current authentication implementation is too weak to provide
 // security against an attacker, since passwords are stored and transmitted

@@ -1,5 +1,10 @@
 #pragma once
 
+// prh - needed somewhere for Arduino IDE build
+#define GIT_TAG   "v3"
+#define GIT_REV   ".1.4"
+#define GRBL_VERSION "prh3.1.4"
+
 #include "WebUI/JSONEncoder.h"
 #include "WebUI/Authentication.h"
 #include "Report.h"  // info_client

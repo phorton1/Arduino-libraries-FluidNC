@@ -23,7 +23,7 @@
 #include "Machine/MachineConfig.h"
 #include "SettingsDefinitions.h"
 #include "MotionControl.h"               // probe_succeeded
-#include "Limits.h"                      // limits_get_state
+#include "GLimits.h"                      // limits_get_state
 #include "Planner.h"                     // plan_get_block_buffer_available
 #include "Stepper.h"                     // step_count
 #include "WebUI/NotificationsService.h"  // WebUI::notificationsservice
@@ -486,7 +486,7 @@ static float* get_wco() {
     return wco;
 }
 
-static void mpos_to_wpos(float* position) {
+void mpos_to_wpos(float* position) {
     float* wco    = get_wco();
     auto   n_axis = config->_axes->_numberAxis;
     for (int idx = 0; idx < n_axis; idx++) {

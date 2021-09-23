@@ -11,7 +11,7 @@
 
 #include "Machine/MachineConfig.h"
 #include "Report.h"         // report_feedback_message
-#include "Limits.h"         // limits_get_state, soft_limit
+#include "GLimits.h"         // limits_get_state, soft_limit
 #include "Planner.h"        // plan_get_current_block
 #include "MotionControl.h"  // PARKING_MOTION_LINE_NUMBER
 #include "Settings.h"       // settings_execute_startup

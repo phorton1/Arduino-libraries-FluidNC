@@ -67,8 +67,16 @@ namespace Spindles {
     }
 
     void IRAM_ATTR PWM::setSpeedfromISR(uint32_t dev_speed) {
-        set_enable(gc_state.modal.spindle != SpindleState::Disable);
-        set_output(dev_speed);
+		// prh - this is getting called from Stepper::pulse_func() in a way
+		// that turns off the motor in a way I don't understand and which
+		// does not seem right to me.
+		//
+		// log_debug("setSpeedfromISR(" << ((uint8_t)gc_state.modal.spindle) << "," << dev_speed << ")");
+        //
+		// So I am commenting out the following two lines:
+		//
+		// set_enable(gc_state.modal.spindle != SpindleState::Disable);
+        // set_output(dev_speed);
     }
 
     // XXX this is the same as OnOff::setState so it might be possible to combine them

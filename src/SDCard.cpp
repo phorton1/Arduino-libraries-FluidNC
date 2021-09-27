@@ -19,7 +19,7 @@ public:
 };
 
 SDCard::SDCard() :
-    _pImpl(new FileWrap()), _current_line_number(0), _state(State::Idle), _client(Uart0),
+    _pImpl(new FileWrap()), _current_line_number(0), _state(SDState::Idle), _client(Uart0),
     _auth_level(WebUI::AuthenticationLevel::LEVEL_GUEST), _readyNext(false) {}
 
 void SDCard::listDir(fs::FS& fs, const char* dirname, size_t levels, Print& client) {
@@ -53,14 +53,14 @@ bool SDCard::openFile(fs::FS& fs, const char* path, Print& client, WebUI::Authen
     }
     _client              = client;
     _auth_level          = auth_level;
-    _state               = State::BusyPrinting;
+    _state               = SDState::BusyPrinting;
     _readyNext           = false;  // this will get set to true when an "ok" message is issued
     _current_line_number = 0;
     return true;
 }
 
 bool SDCard::closeFile() {
-    _state               = State::Idle;
+    _state               = SDState::Idle;
     _readyNext           = false;
     _current_line_number = 0;
     _client              = Uart0;
@@ -120,27 +120,27 @@ uint32_t SDCard::lineNumber() {
 // 3. The SD card is not plugged in and there is a detect pin to tell us that
 // 4. The SD card is not plugged in and we have to discover that by trying to read it.
 // 5. The SD card is plugged in but its filesystem cannot be read
-SDCard::State SDCard::test_or_open(bool refresh) {
+SDState SDCard::test_or_open(bool refresh) {
     auto spiConfig = config->_spi;
 
     if (spiConfig == nullptr || !spiConfig->defined()) {
         //log_debug("SPI not defined");
-        return SDCard::State::NotPresent;
+        return SDState::NotPresent;
     }
 
     if (spiConfig == nullptr || _cs.undefined()) {
         //log_debug("SD cs not defined");
-        return SDCard::State::NotPresent;
+        return SDState::NotPresent;
     }
 
     //no need to go further if SD detect is not correct
     if (_cardDetect.defined() && !_cardDetect.read()) {
-        _state = SDCard::State::NotPresent;
+        _state = SDState::NotPresent;
         return _state;
     }
 
     //if busy doing something return state
-    if (_state >= SDCard::State::Busy) {
+    if (_state >= SDState::Busy) {
         return _state;
     }
 
@@ -151,34 +151,34 @@ SDCard::State SDCard::test_or_open(bool refresh) {
     //SD is idle or not detected, let see if still the case
     SD.end();
 
-    _state = SDCard::State::NotPresent;
+    _state = SDState::NotPresent;
 
     auto csPin   = _cs.getNative(Pin::Capabilities::Output | Pin::Capabilities::Native);
 
     //refresh content if card was removed
     if (SD.begin(csPin, SPI, SPIfreq, "/sd", 2)) {
         if (SD.cardSize() > 0) {
-            _state = SDCard::State::Idle;
+            _state = SDState::Idle;
         }
     }
     return _state;
 }
 
-SDCard::State SDCard::begin(SDCard::State newState) {
-    SDCard::State oldState = test_or_open(true);
-    if (oldState == SDCard::State::Idle) {
+SDState SDCard::begin(SDState newState) {
+    SDState oldState = test_or_open(true);
+    if (oldState == SDState::Idle) {
         _state = newState;
     }
     return oldState;
 }
 
-SDCard::State SDCard::get_state() {
+SDState SDCard::get_state() {
     return test_or_open(false);
 }
 
 void SDCard::end() {
     SD.end();
-    _state = State::Idle;
+    _state = SDState::Idle;
 }
 
 const char* SDCard::filename() {

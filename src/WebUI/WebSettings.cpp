@@ -170,7 +170,7 @@ namespace WebUI {
         webPrint(GIT_REV);
         // TODO: change grbl-embedded to FluidNC after fixing WebUI
         webPrint(" # FW target:grbl-embedded  # FW HW:");
-        webPrint(config->_sdCard->get_state() == SDCard::State::NotPresent ? "No SD" : "Direct SD");
+        webPrint(config->_sdCard->get_state() == SDState::NotPresent ? "No SD" : "Direct SD");
         webPrint("  # primary sd:/sd # secondary sd:none # authentication:");
 #ifdef ENABLE_AUTHENTICATION
         webPrint("yes");
@@ -614,10 +614,10 @@ namespace WebUI {
         if (path[0] != '/') {
             path = "/" + path;
         }
-        switch (config->_sdCard->begin(SDCard::State::BusyReading)) {
-            case SDCard::State::Idle:
+        switch (config->_sdCard->begin(SDState::BusyReading)) {
+            case SDState::Idle:
                 break;
-            case SDCard::State::NotPresent:
+            case SDState::NotPresent:
                 webPrintln("No SD Card");
                 return Error::FsFailedMount;
             default:
@@ -719,9 +719,9 @@ namespace WebUI {
     }
 
     static Error deleteSDObject(char* parameter, AuthenticationLevel auth_level) {  // ESP215
-        auto state = config->_sdCard->begin(SDCard::State::BusyWriting);
-        if (state != SDCard::State::Idle) {
-            webPrintln((state == SDCard::State::NotPresent) ? "No SD card" : "Busy");
+        auto state = config->_sdCard->begin(SDState::BusyWriting);
+        if (state != SDState::Idle) {
+            webPrintln((state == SDState::NotPresent) ? "No SD card" : "Busy");
             return Error::Ok;
         }
         Error res = deleteObject(SD, parameter);
@@ -730,10 +730,10 @@ namespace WebUI {
     }
 
     static Error listSDFiles(char* parameter, AuthenticationLevel auth_level) {  // ESP210
-        switch (config->_sdCard->begin(SDCard::State::BusyReading)) {
-            case SDCard::State::Idle:
+        switch (config->_sdCard->begin(SDState::BusyReading)) {
+            case SDState::Idle:
                 break;
-            case SDCard::State::NotPresent:
+            case SDState::NotPresent:
                 webPrintln("No SD Card");
                 return Error::FsFailedMount;
             default:
@@ -826,12 +826,12 @@ namespace WebUI {
 
     static Error showSDStatus(char* parameter, AuthenticationLevel auth_level) {  // ESP200
         const char* resp = "No SD card";
-        switch (config->_sdCard->begin(SDCard::State::BusyReading)) {
-            case SDCard::State::Idle:
+        switch (config->_sdCard->begin(SDState::BusyReading)) {
+            case SDState::Idle:
                 resp = "SD card detected";
                 config->_sdCard->end();
                 break;
-            case SDCard::State::NotPresent:
+            case SDState::NotPresent:
                 resp = "No SD card";
                 break;
             default:

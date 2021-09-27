@@ -23,6 +23,9 @@
 #include "Pin.h"
 #include "Error.h"
 
+#include "FluidTypes.h"
+
+
 #include <cstdint>
 
 // Forward declaration:
@@ -35,16 +38,6 @@ const int32_t SPIfreq = 4000000;
 
 class SDCard : public Configuration::Configurable {
 public:
-    enum class State : uint8_t {
-        Idle          = 0,
-        NotPresent    = 1,
-        Busy          = 2,
-        BusyPrinting  = 2,
-        BusyUploading = 3,
-        BusyParsing   = 4,
-        BusyWriting   = 5,
-        BusyReading   = 6,
-    };
 
     class FileWrap;  // holds a single 'File'; we don't want to include <FS.h> here
 
@@ -55,10 +48,10 @@ private:
     uint32_t  _current_line_number;   // the most recent line number read
     char      comment[COMMENT_SIZE];  // Line to be executed. Zero-terminated.
 
-    State                      _state;
+    SDState                    _state;
     Pin                        _cardDetect;
     Pin                        _cs;
-    SDCard::State              test_or_open(bool refresh);
+    SDState                    test_or_open(bool refresh);
     Print&                     _client;
     WebUI::AuthenticationLevel _auth_level;
 
@@ -69,8 +62,8 @@ public:
     SDCard(const SDCard&) = delete;
     SDCard& operator=(const SDCard&) = delete;
 
-    SDCard::State get_state();
-    SDCard::State begin(SDCard::State newState);
+    SDState get_state();
+    SDState begin(SDState newState);
     void          end();
 
     void     listDir(fs::FS& fs, const char* dirname, size_t levels, Print& client);
@@ -92,7 +85,7 @@ public:
     // Configuration handlers.
     void group(Configuration::HandlerBase& handler) override {
         handler.item("cs", _cs);
-        handler.item("card_detect", _cardDetect);        
+        handler.item("card_detect", _cardDetect);
     }
 
     ~SDCard();

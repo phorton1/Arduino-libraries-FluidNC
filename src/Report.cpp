@@ -124,7 +124,7 @@ static String report_util_axis_values(const float* axis_value) {
 // responses.
 void report_status_message(Error status_code, Print& client) {
     auto sdcard = config->_sdCard;
-    if (sdcard->get_state() == SDCard::State::BusyPrinting) {
+    if (sdcard->get_state() == SDState::BusyPrinting) {
         // When running from SD, the GCode is not coming from a sender, so we are not
         // using the Grbl send/response/error protocol.  We use _readyNext instead of
         // "ok" to indicate readiness for another line, and we report verbose error
@@ -667,7 +667,7 @@ void report_realtime_status(Print& client) {
             }
         }
     }
-    if (config->_sdCard->get_state() == SDCard::State::BusyPrinting) {
+    if (config->_sdCard->get_state() == SDState::BusyPrinting) {
         // XXX WMB FORMAT 4.2f
         client << "|SD:" << config->_sdCard->report_perc_complete() << "," << config->_sdCard->filename();
     }

@@ -27,7 +27,7 @@ FileStream::FileStream(const char* filename, const char* defaultFs) {
         path.replace("/localfs/", "/spiffs/");
     }
     if (path.startsWith("/sd/")) {
-        if (config->_sdCard->begin(SDCard::State::BusyWriting) != SDCard::State::Idle) {
+        if (config->_sdCard->begin(SDState::BusyWriting) != SDState::Idle) {
             throw Error::FsFailedMount;
         }
         _isSD = true;

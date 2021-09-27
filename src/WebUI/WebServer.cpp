@@ -256,7 +256,7 @@ namespace WebUI {
             auto sdCard = config->_sdCard;
             //remove /SD
             path = path.substring(3);
-            if (sdCard->begin(SDCard::State::BusyUploading) != SDCard::State::Idle) {
+            if (sdCard->begin(SDState::BusyUploading) != SDState::Idle) {
                 String content = "cannot open: ";
                 content += path + ", SD is not available.";
 
@@ -1192,10 +1192,10 @@ namespace WebUI {
         bool     list_files = true;
         uint64_t totalspace = 0;
         uint64_t usedspace  = 0;
-        auto     state      = config->_sdCard->begin(SDCard::State::BusyParsing);
-        if (state != SDCard::State::Idle) {
+        auto     state      = config->_sdCard->begin(SDState::BusyParsing);
+        if (state != SDState::Idle) {
             String status = "{\"status\":\"";
-            status += (state == SDCard::State::NotPresent) ? "No SD Card\"}" : "Busy\"}";
+            status += (state == SDState::NotPresent) ? "No SD Card\"}" : "Busy\"}";
             _webserver->sendHeader("Cache-Control", "no-cache");
             _webserver->send(200, "application/json", status);
             return;
@@ -1394,7 +1394,7 @@ namespace WebUI {
                         filename = "/" + upload.filename;
                     }
                     //check if SD Card is available
-                    if (config->_sdCard->begin(SDCard::State::BusyUploading) != SDCard::State::Idle) {
+                    if (config->_sdCard->begin(SDState::BusyUploading) != SDState::Idle) {
                         _upload_status = UploadStatusType::FAILED;
                         log_info("Upload cancelled");
                         pushError(ESP_ERROR_UPLOAD_CANCELLED, "Upload cancelled");
@@ -1436,7 +1436,7 @@ namespace WebUI {
                     auto sdCard = config->_sdCard;
                     vTaskDelay(1 / portTICK_RATE_MS);
                     if (sdUploadFile && (_upload_status == UploadStatusType::ONGOING) &&
-                        (sdCard->get_state() == SDCard::State::BusyUploading)) {
+                        (sdCard->get_state() == SDState::BusyUploading)) {
                         //no error write post data
                         if (upload.currentSize != sdUploadFile.write(upload.buf, upload.currentSize)) {
                             _upload_status = UploadStatusType::FAILED;

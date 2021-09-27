@@ -6,6 +6,7 @@
 #pragma once
 
 #include "Types.h"
+#include "FluidTypes.h"
 
 // Line buffer size from the serial input stream to be executed.Also, governs the size of
 // each of the startup blocks, as they are each stored as a string of this size.
@@ -76,21 +77,6 @@ extern volatile Accessory rtAccessoryOverride;  // Global realtime executor bitf
 extern volatile Percent rtFOverride;  // Feed override value in percent
 extern volatile Percent rtROverride;  // Rapid feed override value in percent
 extern volatile Percent rtSOverride;  // Spindle override value in percent
-
-// Alarm codes.
-enum class ExecAlarm : uint8_t {
-    None               = 0,
-    HardLimit          = 1,
-    SoftLimit          = 2,
-    AbortCycle         = 3,
-    ProbeFailInitial   = 4,
-    ProbeFailContact   = 5,
-    HomingFailReset    = 6,
-    HomingFailDoor     = 7,
-    HomingFailPulloff  = 8,
-    HomingFailApproach = 9,
-    SpindleControl     = 10,
-};
 
 extern volatile ExecAlarm rtAlarm;  // Global realtime executor bitflag variable for setting various alarms.
 

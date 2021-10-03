@@ -296,6 +296,15 @@ InputClient* pollClients() {
             sdcard->_readyNext = false;
             return sdClient;
         }
+
+        // prh - a bug: file ends, pollClients() returns NULL, there's still two lines of
+        // gcode in the planner, but the steppers get turned off in Protocol::main_loop()
+        // before all lines in the planner have been executed.  This forces the planner
+        // to finish if it's just EOF, but lets it turn off the steppers for real errors.
+
+        if (res == Error::Eof)
+            protocol_buffer_synchronize();
+
         report_status_message(res, sdcard->getClient());
     }
 

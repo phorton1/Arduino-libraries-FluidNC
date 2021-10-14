@@ -183,18 +183,23 @@ namespace WebUI {
         switch (WiFi.getMode()) {
             case WIFI_MODE_AP:
                 webPrint(WiFi.softAPIP().toString());
+                webPrint(" # hostname:", WiFi.softAPSSID().c_str());
                 break;
             case WIFI_MODE_STA:
                 webPrint(WiFi.localIP().toString());
+                webPrint(" # hostname:", config->_name);
+                webPrint("-", WiFi.SSID().c_str());
                 break;
             case WIFI_MODE_APSTA:
                 webPrint(WiFi.softAPIP().toString());
+                webPrint(" # hostname:", WiFi.softAPSSID().c_str());
                 break;
             default:
                 webPrint("0.0.0.0");
                 break;
         }
-        webPrint(" # hostname:", wifi_config.Hostname());
+
+        // webPrint(" # hostname:", wifi_config.Hostname());
         if (WiFi.getMode() == WIFI_AP) {
             webPrint("(AP mode)");
         }

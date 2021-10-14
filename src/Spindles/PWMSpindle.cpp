@@ -75,6 +75,8 @@ namespace Spindles {
         //
 		// So I am commenting out the following two lines:
 		//
+		// I am not sure but I think these lines are required for the laser
+		//
 		// set_enable(gc_state.modal.spindle != SpindleState::Disable);
         // set_output(dev_speed);
     }

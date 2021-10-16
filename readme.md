@@ -126,4 +126,4 @@ This library is licensed undere the
 
 **Credits**
 
-- To **bdring** and the [FluidNC Team](https://github.com/bdring/FluidNC) for the core of this project.
+- To **bdring** and the **FluidNC Team**

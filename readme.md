@@ -116,6 +116,12 @@ library that provides a *TFT touchscreen User Interface* to FluidNC and my
 [**extensions**](https://github.com/phorton1/Arduino-libraries-FluidNC_extensions)
 to the FluidNC library
 
+Also, please see some actual machines implemented using this library:
+
+- [**CNC3018_ESP32**](https://github.com/phorton1/Arduino-CNC3018_ESP) - an implementation of an inexpensive 3-axis **3018** cnc machine using this code
+- the [**vMachine**](https://github.com/phorton1/Arduino-_vMachine) - a *Maslow-like* **vPlotter** cnc machine using this code
+
+
 
 <br>
 

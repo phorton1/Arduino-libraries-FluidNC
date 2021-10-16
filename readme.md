@@ -122,7 +122,7 @@ to the FluidNC library
 ## Credits and License
 
 This library is licensed undere the
-[GNU General Public License v3.0]((tree/master/LICENSE.TXT)
+[GNU General Public License v3.0](tree/master/LICENSE.TXT)
 
 **Credits**
 

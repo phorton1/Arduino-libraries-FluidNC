@@ -1,8 +1,10 @@
-# FluidNC for the Arduino
+# FluidNC for the Arduino IDE
 
-This fork of the bdring/FluidNC project has a number of minor changes that
-allow it to be compiled and utilized in the Arduino IDE environment, and
+This denormalized copy of the [**FluidNC**](https://github.com/phorton1/FluidNC)
+project has a number of minor changes
+that allow it to be compiled and utilized in the Arduino IDE environment, and
 to be used as an extensable stand-alone library.
+
 
 **FluidNC** is the best available GRBL/Gcode software available for the ESP32
 processor.  Period.  Running on a $5 dual core machine at 240Mhz with built in
@@ -16,48 +18,56 @@ of choice for small to medium CNC machines.  And I think it is of particular
 interest to makers and experimentors who want to build things that are
 not yet even conceived of.
 
-Therefore I've put a chunk of effort into abstracting it into a usable library.
+Therefore I've put a chunk of effort into abstracting it into library that
+can be extended and used from within the Arduino IDE environment.
 
-## Installing FluidNC Libraries
+## Installing the FluidNC Library
 
-In order to use this lilbrary, clone this fork someplace on your machine and
-**copy the inner FluidNC folder of the prhChanges branch of this repository
-to your Arduino/libraries folder**.
+In order to use this lilbrary, clone or copy **this repository** into your
+Arduino **libraries folder**.
 
-FluidNC has dependencies on a couple of other Arduino libraries. Included
-in the outer /libraries folder are two other libraries that must be in your
-Arduino/libraries folder as well: **ESP32SSDP** and **arduinoWebSockets**. In addition
-you must have a copy of the **TMCStepper** library installed.  Please see the originsl
-[FluidNC/readme.md](../README.md) file for additional details on setting your Arduino IDE up
-to build ESP32 programs and specific settings (i.e. minimum SPIFFS partition)
-required to build FluidNC.
+FluidNC has dependencies on three other Arduino libraries. Two of those are
+included within this repository for ease of installation.  The other is
+installed using the Arduino IDE *Library Manager*.
+
+- Copy the included [**arduinoWebSockets**](..\libraries\arduinoWebSockets) folder from this repository to your Arduino *libraries folder*
+- Copy the included [**ESP32SSDP**](..\libraries\ESP32SSDP)  folder from this repository to your Arduino *libraries folder*
+- Install the **TMCStepper** library using the Arduino IDE *Library Manager*
+
+To build FluidNC sketches in the Arduino IDE you must have already installed
+ESP32 board support from the following links:
+
+- add the [**ESP32 board**](https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html)
+to the Arduino IDE using the *Boards Manager*
+- add the [**Arduino ESP32 filesystem uploader**](https://github.com/me-no-dev/arduino-esp32fs-plugin)
+to your Arduino Sketch "tools" folder
+
+
 
 ## Extending
 
-The modifications I have made in the prhChanges branch are specifically intended
-to go beyond the *"one size fits all"* approach of the FluidNC team and allow you
-to create CNC machines that implement features and utilize libraries not present
+The modifications I have made to FluidNC are specifically intended
+allow you to create CNC machines that implement features and utilize libraries not present
 or normally available in the FluidNC codebase.
 
 I have created two different CNC machines that are based on this library, that
-extend the functionality of the FluidNC codebase, which would be extermely
-inconvenient and difficult to manage within the FluidNC codebase.
+extend the functionality of the FluidNC codebase;
 
-The first is the **vMachine** which implements a *Maslow-like* vPlotter.  I ported
-(part) of the Maslow *kinematics* and the machine makes use of *infrared sensors*
-which are not part of the FluidNC project.  Although it currently is just a
+The first is the [**vMachine**](https://github.com/phorton1/Arduino-_vMachine),
+which implements a *Maslow-like* vPlotter.  I ported
+(part) of the Maslow *kinematics* and the machine makes use of *infrared sensors*.
+Although it currently is just a
 12x18" pen plotter, the intent of this project is that it could easily support
 a full size 4x8' Maslow type machine (which I hope to build in the future).
 
-The second is my (yet another) **"cnc3018"** machine, which adds *mesh levelling*, a *TFT touchscreen
-UI*, a set of *ws2812b* leds, and a *74HC165* IO multiplexer chip that would, once
-again, be difficult or complex to implement and manage from within the FluidNC
-codebase, but which are nicely separated into repositories by using this branched
-library.
+The second is my (yet another) [**CNC 3018**](https://github.com/phorton1/Arduino-CNC3018_ESP)
+machine, which adds [**mesh levelling](*(https://github.com/phorton1/Arduino-libraries-FluidNC_UI)
+and a *74HC165* IO multiplexer chip.
 
-Both of my examples also make use of my FluidNC_Extensions library which currently
-contains a single H file that makes FluidNC store $ parameters (set via the serial
-terminal) persistently.
+Both of these examples also add an (optional)
+[**TFT touchscreen UI**](https://github.com/phorton1/Arduino-libraries-FluidNC_UI)
+and (optional) **ws2812b LEDs** to the the system.
+
 
 
 ## Modifications

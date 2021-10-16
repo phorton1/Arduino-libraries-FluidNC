@@ -30,8 +30,8 @@ FluidNC has dependencies on three other Arduino libraries. Two of those are
 included within this repository for ease of installation.  The other is
 installed using the Arduino IDE *Library Manager*.
 
-- Copy the included [**arduinoWebSockets**](..\libraries\arduinoWebSockets) folder from this repository to your Arduino *libraries folder*
-- Copy the included [**ESP32SSDP**](..\libraries\ESP32SSDP)  folder from this repository to your Arduino *libraries folder*
+- Copy the included [**arduinoWebSockets**](https://github.com/phorton1/Arduino-libraries-FluidNC/tree/master/libraries/arduinoWebSockets) folder from this repository to your Arduino *libraries folder*
+- Copy the included [**ESP32SSDP**](https://github.com/phorton1/Arduino-libraries-FluidNC/tree/master/libraries/ESP32SSDP)  folder from this repository to your Arduino *libraries folder*
 - Install the **TMCStepper** library using the Arduino IDE *Library Manager*
 
 To build FluidNC sketches in the Arduino IDE you must have already installed
@@ -50,7 +50,7 @@ The modifications I have made to FluidNC are specifically intended
 allow you to create CNC machines that implement features and utilize libraries not present
 or normally available in the FluidNC codebase.
 
-I have created two different CNC machines that are based on this library, that
+I have created two different CNC machines that are based on this library that
 extend the functionality of the FluidNC codebase;
 
 The first is the [**vMachine**](https://github.com/phorton1/Arduino-_vMachine),
@@ -61,7 +61,7 @@ Although it currently is just a
 a full size 4x8' Maslow type machine (which I hope to build in the future).
 
 The second is my (yet another) [**CNC 3018**](https://github.com/phorton1/Arduino-CNC3018_ESP)
-machine, which adds [**mesh levelling](*(https://github.com/phorton1/Arduino-libraries-FluidNC_UI)
+machine, which adds [**mesh levelling**](https://github.com/phorton1/Arduino-libraries-FluidNC_extensions)
 and a *74HC165* IO multiplexer chip.
 
 Both of these examples also add an (optional)
@@ -69,8 +69,7 @@ Both of these examples also add an (optional)
 and (optional) **ws2812b LEDs** to the the system.
 
 
-
-## Modifications
+## Modifications (Change List)
 
 Here is, more or less, a change list of the things I have changed from the
 main FluidNC branch:
@@ -103,3 +102,28 @@ Arduino methods which are owned by YOUR sketch.
 
 - Various other changes to support things, remove spurious debugging, and generally to make it
 work like I expect, and want it to work.
+
+<br>
+
+## Please Also See
+
+This repository is a denormalized copy of the **inner FluidNC** folder of
+ [**my fork**](https://github.com/phorton1/FluidNC)
+of the **bdring/FluidNC** project.
+
+Please also see my [**FluidNC_UI**](https://github.com/phorton1/Arduino-libraries-FluidNC_UI)
+library that provides a *TFT touchscreen User Interface* to FluidNC and my
+[**extensions**](https://github.com/phorton1/Arduino-libraries-FluidNC_extensions)
+to the FluidNC library
+
+
+<br>
+
+## Credits and License
+
+This library is licensed undere the
+[GNU General Public License v3.0]((tree/master/LICENSE.TXT)
+
+**Credits**
+
+- To **bdring** and the [FluidNC Team](https://github.com/bdring/FluidNC) for the core of this project.

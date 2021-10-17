@@ -47,6 +47,7 @@ enum class Error : uint8_t {
     GcodeG43DynamicAxisError    = 37,
     GcodeMaxValueExceeded       = 38,
     PParamMaxExceeded           = 39,
+    CheckControlPins            = 40,
     FsFailedMount               = 60,  // SD Failed to mount
     FsFailedRead                = 61,  // SD Failed to read file
     FsFailedOpenDir             = 62,  // SD card failed to open directory
@@ -73,8 +74,9 @@ enum class Error : uint8_t {
     BadPinSpecification         = 150,
     BadRuntimeConfigSetting     = 151,
     ConfigurationInvalid        = 152,
+    UploadFailed                = 160,
+    DownloadFailed              = 161,
 };
-
 
 
 // Alarm codes.
@@ -90,6 +92,7 @@ enum class ExecAlarm : uint8_t {
     HomingFailPulloff  = 8,
     HomingFailApproach = 9,
     SpindleControl     = 10,
+    ControlPin         = 11,
 };
 
 
@@ -146,6 +149,3 @@ enum class Cmd : uint8_t {
     CoolantFloodOvrToggle = 0xA0,
     CoolantMistOvrToggle  = 0xA1,
 };
-
-
-

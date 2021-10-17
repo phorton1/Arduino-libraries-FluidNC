@@ -53,7 +53,7 @@ void main_init() {
         // Load settings from non-volatile storage
         settings_init();  // requires config
 
-        log_info("FluidNC " << GIT_TAG << GIT_REV);
+        log_info("FluidNC " << git_info);
         log_info("Compiled with ESP32 SDK:" << ESP.getSdkVersion());
 
         bool configOkay = config->load(config_filename->get());
@@ -106,7 +106,7 @@ void main_init() {
             // NOTE: The startup script will run after successful completion of the homing cycle, but
             // not after disabling the alarm locks. Prevents motion startup blocks from crashing into
             // things uncontrollably. Very bad.
-            if (config->_homingInitLock && Machine::Axes::homingMask) {
+            if (config->_start->_mustHome && Machine::Axes::homingMask) {
                 // If there is an axis with homing configured, enter Alarm state on startup
                 sys.state = State::Alarm;
             }
@@ -125,10 +125,8 @@ void main_init() {
         register_client(&WebUI::telnet_server);
 #endif
 #ifdef ENABLE_BLUETOOTH
-        if (config->_comms->_bluetoothConfig) {
-            config->_comms->_bluetoothConfig->begin();
-            register_client(&WebUI::SerialBT);
-        }
+        WebUI::bt_config.begin();
+        register_client(&WebUI::SerialBT);
 #endif
         WebUI::inputBuffer.begin();
     } catch (const AssertionFailed& ex) {
@@ -200,6 +198,8 @@ void run_once() {
 void WEAK_LINK machine_init() {}
 
 void WEAK_LINK display_init() {}
+
+void WEAK_LINK display(const char* tag, String s) {}
 
 #if 0
 int main() {

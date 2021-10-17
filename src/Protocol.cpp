@@ -34,6 +34,7 @@ std::map<ExecAlarm, const char*> AlarmNames = {
     { ExecAlarm::HomingFailPulloff, "Homing Fail Pulloff" },
     { ExecAlarm::HomingFailApproach, "Homing Fail Approach" },
     { ExecAlarm::SpindleControl, "Spindle Control" },
+    { ExecAlarm::ControlPin, "Control Pin Initially On" },
 };
 
 volatile Accessory rtAccessoryOverride;  // Global realtime executor bitflag variable for spindle/coolant overrides.
@@ -77,10 +78,13 @@ union SpindleStop {
 static SpindleStop spindle_stop_ovr;
 
 bool can_park() {
+    if (spindle->isRateAdjusted()) {
+        return false;
+    }
     if (config->_enableParkingOverrideControl) {
-        return sys.override_ctrl == Override::ParkingMotion && Machine::Axes::homingMask && !config->_laserMode;
+        return sys.override_ctrl == Override::ParkingMotion && Machine::Axes::homingMask;
     } else {
-        return Machine::Axes::homingMask && !config->_laserMode;
+        return Machine::Axes::homingMask;
     }
 }
 
@@ -95,11 +99,13 @@ void protocol_reset() {
     rtSleep                   = false;
     rtCycleStop               = false;
     rtAccessoryOverride.value = 0;
-    rtAlarm                   = ExecAlarm::None;
     rtFOverride               = FeedOverride::Default;
     rtROverride               = RapidOverride::Default;
     rtSOverride               = SpindleSpeedOverride::Default;
     spindle_stop_ovr.value    = 0;
+
+    // Do not clear rtAlarm because it might have been set during configuration
+    // rtAlarm = ExecAlarm::None;
 }
 
 static int32_t idleEndTime = 0;
@@ -115,7 +121,7 @@ void protocol_main_loop() {
         report_feedback_message(Message::ConfigAlarmLock);
     } else {
         // Perform some machine checks to make sure everything is good to go.
-        if (config->_checkLimitsAtInit && config->_axes->hasHardLimits()) {
+        if (config->_start->_checkLimits && config->_axes->hasHardLimits()) {
             if (limits_get_state()) {
                 sys.state = State::Alarm;  // Ensure alarm state is active.
                 report_feedback_message(Message::CheckLimits);
@@ -699,7 +705,7 @@ void protocol_exec_rt_system() {
         protocol_do_macro(1);
     }
     if (rtButtonMacro2) {
-        rtButtonMacro0 = false;
+        rtButtonMacro2 = false;
         protocol_do_macro(2);
     }
     if (rtButtonMacro3) {
@@ -763,7 +769,7 @@ static void protocol_exec_rt_suspend() {
         restore_spindle       = block->spindle;
         restore_spindle_speed = block->spindle_speed;
     }
-    if (config->_disableLaserDuringHold && config->_laserMode) {
+    if (spindle->isRateAdjusted()) {
         rtAccessoryOverride.bit.spindleOvrStop = true;
     }
 
@@ -868,7 +874,7 @@ static void protocol_exec_rt_suspend() {
                         if (gc_state.modal.spindle != SpindleState::Disable) {
                             // Block if safety door re-opened during prior restore actions.
                             if (!sys.suspend.bit.restartRetract) {
-                                if (config->_laserMode) {
+                                if (spindle->isRateAdjusted()) {
                                     // When in laser mode, defer turn on until cycle starts
                                     sys.step_control.updateSpindleSpeed = true;
                                 } else {
@@ -923,7 +929,7 @@ static void protocol_exec_rt_suspend() {
                     } else if (spindle_stop_ovr.bit.restore || spindle_stop_ovr.bit.restoreCycle) {
                         if (gc_state.modal.spindle != SpindleState::Disable) {
                             report_feedback_message(Message::SpindleRestore);
-                            if (config->_laserMode) {
+                            if (spindle->isRateAdjusted()) {
                                 // When in laser mode, defer turn on until cycle starts
                                 sys.step_control.updateSpindleSpeed = true;
                             } else {

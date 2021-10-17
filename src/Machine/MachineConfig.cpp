@@ -43,23 +43,16 @@ namespace Machine {
         handler.section("control", _control);
         handler.section("coolant", _coolant);
         handler.section("probe", _probe);
-        handler.section("comms", _comms);
         handler.section("macros", _macros);
+        handler.section("start", _start);
 
         handler.section("user_outputs", _userOutputs);
-        handler.item("software_debounce_ms", _softwareDebounceMs);
         // TODO: Consider putting these under a gcode: hierarchy level? Or motion control?
-        handler.item("laser_mode", _laserMode);
-        handler.item("arc_tolerance", _arcTolerance);
-        handler.item("junction_deviation", _junctionDeviation);
+        handler.item("arc_tolerance_mm", _arcTolerance);
+        handler.item("junction_deviation_mm", _junctionDeviation);
         handler.item("verbose_errors", _verboseErrors);
         handler.item("report_inches", _reportInches);
-        handler.item("homing_init_lock", _homingInitLock);
         handler.item("enable_parking_override_control", _enableParkingOverrideControl);
-        handler.item("deactivate_parking_upon_init", _deactivateParkingUponInit);
-        handler.item("check_limits_at_init", _checkLimitsAtInit);
-        handler.item("limits_two_switches_on_axis", _limitsTwoSwitchesOnAxis);
-        handler.item("disable_laser_during_hold", _disableLaserDuringHold);
         handler.item("use_line_numbers", _useLineNumbers);
 
         Spindles::SpindleFactory::factory(handler, _spindles);
@@ -105,6 +98,10 @@ namespace Machine {
             _control = new Control();
         }
 
+        if (_start == nullptr) {
+            _start = new Start();
+        }
+
         if (_spindles.size() == 0) {
             log_info("Spindle: using defaults (no spindle)");
             _spindles.push_back(new Spindles::Null());
@@ -120,23 +117,6 @@ namespace Machine {
                 s->_tool = next_tool++;
             }
         }
-
-        if (_comms == nullptr) {
-            log_info("Comms: using defaults");
-            _comms = new Communications();
-#ifdef ENABLE_WIFI
-            _comms->_apConfig = new WifiAPConfig();
-#endif
-        }
-
-#ifdef ENABLE_WIFI
-        // This is very helpful for testing YAML config files.  If things
-        // screw up, you can still connect and upload a new config.yaml
-        // TODO - Consider whether we want this for the long term
-        if (!_comms->_apConfig) {
-            _comms->_apConfig = new WifiAPConfig();
-        }
-#endif
 
         if (_macros == nullptr) {
             _macros = new Macros();
@@ -309,7 +289,6 @@ namespace Machine {
         delete _sdCard;
         delete _spi;
         delete _control;
-        delete _comms;
         delete _macros;
     }
 }

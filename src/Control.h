@@ -7,9 +7,9 @@
 #include "ControlPin.h"
 
 class Control : public Configuration::Configurable {
-private:
+// private:
     // TODO: Should we not just put this in an array so we can enumerate it easily?
-
+public:
     ControlPin _safetyDoor;
     ControlPin _reset;
     ControlPin _feedHold;
@@ -28,8 +28,9 @@ public:
     // Configuration handlers.
     void group(Configuration::HandlerBase& handler) override;
 
-    bool system_check_safety_door_ajar();
-    void report(char* status);
+    bool   stuck();
+    bool   system_check_safety_door_ajar();
+    String report();
 
     ~Control() = default;
 };

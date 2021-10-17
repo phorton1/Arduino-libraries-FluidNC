@@ -78,7 +78,7 @@ extern volatile Percent rtFOverride;  // Feed override value in percent
 extern volatile Percent rtROverride;  // Rapid feed override value in percent
 extern volatile Percent rtSOverride;  // Spindle override value in percent
 
-extern volatile ExecAlarm rtAlarm;  // Global realtime executor bitflag variable for setting various alarms.
+extern volatile ExecAlarm rtAlarm;  // Global realtime executor variable for setting various alarms.
 
 #include <map>
 extern std::map<ExecAlarm, const char*> AlarmNames;

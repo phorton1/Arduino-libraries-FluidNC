@@ -10,7 +10,6 @@
 
 #include "FluidTypes.h"
 
-
 const char* errorString(Error errorNumber);
 
 extern std::map<Error, const char*> ErrorNames;

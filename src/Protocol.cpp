@@ -656,6 +656,10 @@ void protocol_do_macro(int macro_num) {
 }
 
 void protocol_exec_rt_system() {
+
+    // prh - realtime_only hack for realtime command responsiveness
+    pollClients(true);
+
     protocol_do_alarm();  // If there is a hard or soft limit, this will block until rtReset is set
 
     if (rtReset) {

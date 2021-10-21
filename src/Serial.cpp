@@ -230,7 +230,19 @@ void client_init() {
     register_client(&WebUI::inputBuffer);  // Macros
 }
 
-InputClient* pollClients() {
+InputClient* pollClients(bool realtime_only /*=false*/) {
+
+    auto sdcard = config->_sdCard;
+
+    // prh - realtime command responsiveness hack
+    // if called from protocol_exec_rt_system() and
+    // there is no sdcard job running, just return
+    // so as to force "regular" serial input through
+    // protocol_main_loop()
+
+    if (realtime_only && sdcard->get_state() < SDState::Busy)
+        return NULL;
+
     for (auto client : clientq) {
         auto source = client->_in;
         int  c      = source->read();
@@ -272,7 +284,15 @@ InputClient* pollClients() {
                     client->_line[client->_linelen] = '\0';
                     client->_line_returned          = true;
                     display("GCODE", client->_line);
-                    return client;
+
+                    // this hack will continue to buffer client line(s) when
+                    // called with realtime_only from protocol_exec_rt_system(),
+                    // but at least realtime commands while an SD job is printing
+                    // will be responsive. It *could* result in serial input not
+                    // working correctly ..
+                    if (!realtime_only)
+
+                        return client;
                 } else {
                     // Log an error and discard the line if it happens during an SD run
                     log_error("SD card job running");
@@ -286,12 +306,16 @@ InputClient* pollClients() {
         }
     }
 
+    // hack for realtime command responsiveness
+
+    if (realtime_only)
+        return NULL;
+
     WebUI::COMMANDS::handle();  // Handles feeding watchdog and ESP restart
 #ifdef ENABLE_WIFI
     WebUI::wifi_services.handle();  // OTA, web_server, telnet_server polling
 #endif
 
-    auto sdcard = config->_sdCard;
     // _readyNext indicates that input is coming from a file and
     // the GCode system is ready for another line.
     if (sdcard && sdcard->_readyNext) {

@@ -232,6 +232,8 @@ void protocol_execute_realtime() {
     }
 }
 
+#include "Uart.h"
+
 static void alarm_msg(ExecAlarm alarm_code) {
     allClients << "ALARM:" << static_cast<int>(alarm_code) << '\n';
     delay_ms(500);  // Force delay to ensure message clears serial write buffer.
@@ -257,6 +259,15 @@ static void protocol_do_alarm() {
                 // the user and a GUI time to do what is needed before resetting, like killing the
                 // incoming stream. The same could be said about soft limits. While the position is not
                 // lost, continued streaming could cause a serious crash if by chance it gets executed.
+
+                // lol, yes, everything is blocked.
+                // since pollClients() is never called (this code assumes an
+                // old task based architecture for serial IO) you CANNOT
+                // CLEAR THE CRITICAL ERROR FROM THE SERIAL TERMINAL !!
+                // So I a call to my pollClients(true) is added here.
+
+                pollClients(true);
+
                 vTaskDelay(1);  // give serial task some time
             } while (!rtReset);
             break;

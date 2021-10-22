@@ -238,9 +238,15 @@ InputClient* pollClients(bool realtime_only /*=false*/) {
     // if called from protocol_exec_rt_system() and
     // there is no sdcard job running, just return
     // so as to force "regular" serial input through
-    // protocol_main_loop()
+    // protocol_main_loop() EXCEPT if we are in the
+    // tight loop in Protocol.cpp waiting for a reest
+    // (when in a "critical alarm state" due to
+    // HardLimit or SoftLimit)
 
-    if (realtime_only && sdcard->get_state() < SDState::Busy)
+    if (realtime_only &&
+        rtAlarm != ExecAlarm::HardLimit &&
+        rtAlarm != ExecAlarm::SoftLimit &&
+        sdcard->get_state() < SDState::Busy)
         return NULL;
 
     for (auto client : clientq) {

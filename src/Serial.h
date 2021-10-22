@@ -45,7 +45,6 @@ public:
     bool    _line_returned;
 };
 
-// prh - realtime_only hack for realtime command responsiveness
 InputClient* pollClients(bool realtime_only=false);
 
 class AllClients : public Print {

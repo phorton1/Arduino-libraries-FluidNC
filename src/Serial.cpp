@@ -234,14 +234,7 @@ InputClient* pollClients(bool realtime_only /*=false*/) {
 
     auto sdcard = config->_sdCard;
 
-    // prh - realtime command responsiveness hack
-    // if called from protocol_exec_rt_system() and
-    // there is no sdcard job running, just return
-    // so as to force "regular" serial input through
-    // protocol_main_loop() EXCEPT if we are in the
-    // tight loop in Protocol.cpp waiting for a reest
-    // (when in a "critical alarm state" due to
-    // HardLimit or SoftLimit)
+    // realtime_only allows for calls that just handle realtime commands.
 
     if (realtime_only &&
         rtAlarm != ExecAlarm::HardLimit &&
@@ -263,7 +256,12 @@ InputClient* pollClients(bool realtime_only /*=false*/) {
                 execute_realtime_command(static_cast<Cmd>(c), *source);
                 continue;
             }
-
+            if (realtime_only)
+            {
+                log_error("Only realtime commands are allowed");
+                client->_linelen = 0;
+                continue;
+            }
             if (ch == '\b') {
                 // Simple editing for interactive input - backspace erases
                 if (client->_linelen) {
@@ -290,16 +288,9 @@ InputClient* pollClients(bool realtime_only /*=false*/) {
                     client->_line[client->_linelen] = '\0';
                     client->_line_returned          = true;
                     display("GCODE", client->_line);
-
-                    // this hack will continue to buffer client line(s) when
-                    // called with realtime_only from protocol_exec_rt_system(),
-                    // but at least realtime commands while an SD job is printing
-                    // will be responsive. It *could* result in serial input not
-                    // working correctly ..
-                    if (!realtime_only)
-
-                        return client;
+                    return client;
                 } else {
+                    // should never get here
                     // Log an error and discard the line if it happens during an SD run
                     log_error("SD card job running");
                     client->_linelen = 0;
@@ -311,9 +302,6 @@ InputClient* pollClients(bool realtime_only /*=false*/) {
             ++client->_linelen;
         }
     }
-
-    // hack for realtime command responsiveness
-
     if (realtime_only)
         return NULL;
 

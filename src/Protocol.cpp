@@ -260,12 +260,7 @@ static void protocol_do_alarm() {
                 // incoming stream. The same could be said about soft limits. While the position is not
                 // lost, continued streaming could cause a serious crash if by chance it gets executed.
 
-                // lol, yes, everything is blocked.
-                // since pollClients() is never called (this code assumes an
-                // old task based architecture for serial IO) you CANNOT
-                // CLEAR THE CRITICAL ERROR FROM THE SERIAL TERMINAL !!
-                // So I a call to my pollClients(true) is added here.
-
+                // call pollClients() to allow processing of ^X realtime RESET command
                 pollClients(true);
 
                 vTaskDelay(1);  // give serial task some time
@@ -668,7 +663,7 @@ void protocol_do_macro(int macro_num) {
 
 void protocol_exec_rt_system() {
 
-    // prh - realtime_only hack for realtime command responsiveness
+    // call pollClients() to allow processing of realtime commands
     pollClients(true);
 
     protocol_do_alarm();  // If there is a hard or soft limit, this will block until rtReset is set

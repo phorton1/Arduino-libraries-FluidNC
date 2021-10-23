@@ -3,7 +3,7 @@
 This denormalized copy of the [**FluidNC**](https://github.com/phorton1/FluidNC)
 project has a number of minor changes
 that allow it to be compiled and utilized in the Arduino IDE environment, and
-to be used as an extensable stand-alone library.
+to be used as an extensible stand-alone library.
 
 
 **FluidNC** is the best available GRBL/Gcode software available for the ESP32
@@ -15,7 +15,7 @@ the previous generations of Arduino based GRBL implementations.
 
 I believe FluidNC and the ESP32 merit mass acceptance as the controller
 of choice for small to medium CNC machines.  And I think it is of particular
-interest to makers and experimentors who want to build things that are
+interest to makers and experimenters who want to build things that are
 not yet even conceived of.
 
 Therefore I've put a chunk of effort into abstracting it into library that
@@ -23,7 +23,7 @@ can be extended and used from within the Arduino IDE environment.
 
 ## Installing the FluidNC Library
 
-In order to use this lilbrary, clone or copy **this repository** into your
+In order to use this library, clone or copy **this repository** into your
 Arduino **libraries folder**.
 
 FluidNC has dependencies on three other Arduino libraries. Two of those are
@@ -123,7 +123,7 @@ of the **bdring/FluidNC** project.
 
 ## Credits and License
 
-This library is licensed undere the
+This library is licensed under the
 [GNU General Public License v3.0](https://github.com/phorton1/Arduino-libraries-FluidNC/tree/master/LICENSE.TXT)
 
 **Credits**

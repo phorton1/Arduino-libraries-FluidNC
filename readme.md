@@ -60,7 +60,7 @@ Although it currently is just a
 12x18" pen plotter, the intent of this project is that it could easily support
 a full size 4x8' Maslow type machine (which I hope to build in the future).
 
-The second is my (yet another) [**CNC 3018**](https://github.com/phorton1/Arduino-CNC3018_ESP)
+The second is my (yet another) [**CNC 3018**](https://github.com/phorton1/Arduino-esp32_cnc3018)
 machine, which adds [**mesh levelling**](https://github.com/phorton1/Arduino-libraries-FluidNC_extensions)
 and a *74HC165* IO multiplexer chip.
 
@@ -114,7 +114,7 @@ of the **bdring/FluidNC** project.
 
 - [**FluidNC_UI**](https://github.com/phorton1/Arduino-libraries-FluidNC_UI) - a *touch screen user interface* for FluidNC
 - [**FluidNC_extensions**](https://github.com/phorton1/Arduino-libraries-FluidNC_extensions) - a number of *extensions* to FluidNC
-- [**CNC3018_ESP32**](https://github.com/phorton1/Arduino-CNC3018_ESP) - an implementation of an inexpensive 3-axis **3018** cnc machine using this code
+- [**esp32_cnc301832**](https://github.com/phorton1/Arduino-esp32_cnc3018) - an implementation of an inexpensive 3-axis **3018** cnc machine using this code
 - the [**vMachine**](https://github.com/phorton1/Arduino-_vMachine) - a *Maslow-like* **vPlotter** cnc machine using this code
 
 

@@ -17,9 +17,6 @@ enum class ProbeState : uint8_t {
 
 class Probe : public Configuration::Configurable {
     // Inverts the probe pin state depending on user settings and probing cycle mode.
-    // prh - made into base class with virtuals so that a derived instance
-	// can be attached directly to the config variable in order to
-	// implement other virtualized pins (i.e. 74HC165N shift registers)
     bool _isProbeAway = false;
 
     // Configurable
@@ -34,19 +31,19 @@ public:
 
     Probe() = default;
 
-    virtual bool exists() const { return _probePin.defined(); }
+    bool exists() const { return _probePin.defined(); }
 
     // Probe pin initialization routine.
-    virtual void init();
+    void init();
 
     // setup probing direction G38.2 vs. G38.4
-    virtual void set_direction(bool is_away);
+    void set_direction(bool is_away);
 
     // Returns probe pin state. Triggered = true. Called by gcode parser and probe state monitor.
-    virtual bool get_state();
+    bool get_state();
 
     // Returns true if the probe pin is tripped, depending on the direction (away or not)
-    virtual bool IRAM_ATTR tripped();
+    bool IRAM_ATTR tripped();
 
     // Configuration handlers.
     void validate() const override;

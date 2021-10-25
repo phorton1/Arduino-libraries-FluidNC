@@ -11,7 +11,7 @@
 
 namespace Machine {
     class SerInBus : public Configuration::Configurable {
-        // A Serial Input Bus for SerIn pins using 74HC165 or similar.
+        // A Serial Input Bus for SERI pins using 74HC165 or similar.
         // Supports upto 32 inputs using 3 ESP32 Native pins.
         // Sets up a task to poll the 74HC165 100 times per second.
         // Clients call "value()" to get the most recent state.

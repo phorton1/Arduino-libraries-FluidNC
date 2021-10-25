@@ -20,12 +20,36 @@ namespace Machine {
 
     public:
 
+        static const int s_max_pins = 32;
+            // The maximum number of pins is limited by this object
+            // storing them in a single uint32_t, so the maximum number
+            // of 74HC165's that can be chained is four. The actual number
+            // of pins used is determined by their declarations in
+            // the yaml file. This object keeps track of the highest
+            // pin number used and reads enough bytes to cover that
+            // pin.  So if the yaml file only declares 0..5, only one
+            // 74HC165 will be polled.
+
+
         SerInBus() = default;
 
-        uint32_t value()       { return m_value; }
-            // there is currently no accessor for a synchronous read ...
-
         void init();
+
+        // there is currently no accessor for a synchronous read ...
+
+        uint32_t value()
+        {
+            return m_value;
+        }
+
+        static void setPinUsed(int pin_num)
+        {
+            s_pins_used |= (1 << pin_num);
+        }
+        static uint32_t getPinsUsed()
+        {
+            return s_pins_used;
+        }
 
         void attachFakeInterrupt(int pin_num, Pins::SerInPinDetail *pd)
         {
@@ -39,10 +63,6 @@ namespace Machine {
 
         ~SerInBus() = default;
 
-       static bool pins_defined;
-            // keeps track if any pins have been defined so that
-            // we can give a configuration error if they have and
-            // there is no SerIn: definition section in the YAML file.
 
     protected:
 
@@ -53,14 +73,19 @@ namespace Machine {
         Pin _latch;
         Pin _data;
 
+        int m_clk_pin;      // native pins
+        int m_latch_pin;
+        int m_data_pin;
+
         uint32_t m_value = 0;
+        int m_num_poll_bytes = 0;
+        static uint32_t s_pins_used;
         uint32_t m_fake_interrupt_mask = 0;
-        Pins::SerInPinDetail *m_int_pins[Pins::SerInPinDetail::nSerInPins];
+        Pins::SerInPinDetail *m_int_pins[s_max_pins];
 
         uint32_t read();
         static void SerInBusTask(void *params);
             // needs better scheme for immediaate synchronous read during probing
-
 
     };
 }

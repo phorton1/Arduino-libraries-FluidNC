@@ -30,9 +30,7 @@
 
 namespace Machine
 {
-
-    // static
-    bool SerInBus::pins_defined = false;
+    uint32_t SerInBus::s_pins_used = 0;
 
     void SerInBus::validate() const
     {
@@ -41,14 +39,6 @@ namespace Machine
             Assert(_clk.defined(), "SerIn CLK pin must be configured");
             Assert(_latch.defined(),"SerIn Latch pin must be configured");
             Assert(_data.defined(), "SerIn Data pin must be configured");
-
-            auto clkPin = _clk.getNative(Pin::Capabilities::Output | Pin::Capabilities::Native);
-            auto latchPin  = _latch.getNative(Pin::Capabilities::Output | Pin::Capabilities::Native);
-            auto dataPin = _data.getNative(Pin::Capabilities::Input | Pin::Capabilities::Native);
-
-            Assert(clkPin, "could not get Native SerIn CLK pin");
-            Assert(latchPin,"could not get Native SerIn Latch pin");
-            Assert(dataPin, "could not get Native SerIn Data pin");
         }
     }
 
@@ -67,17 +57,50 @@ namespace Machine
             _latch.defined() &&
             _data.defined())
         {
+
+            m_clk_pin = _clk.getNative(Pin::Capabilities::Output | Pin::Capabilities::Native);
+            m_latch_pin  = _latch.getNative(Pin::Capabilities::Output | Pin::Capabilities::Native);
+            m_data_pin = _data.getNative(Pin::Capabilities::Input | Pin::Capabilities::Native);
+
+            Assert(m_clk_pin, "could not get Native SerIn CLK_pin");
+            Assert(m_latch_pin,"could not get Native SerIn Latch_pin");
+            Assert(m_data_pin, "could not get Native SerIn Data_pin");
+
+            // set the number of byte to poll based on the
+            // highest SERIN pin number used ..
+
+            for (int i=s_max_pins-1; i>=0; i--)
+            {
+                if (s_pins_used & (1 >> i))
+                {
+                    m_num_poll_bytes = (i + 1) / 8;
+                    break;
+                }
+            }
+
+            if (!m_num_poll_bytes)
+            {
+                log_info("NOTE: SERIN bus defined but no SERIN pins defined");
+            }
+
             _clk.setAttr(Pin::Attr::Output);
             _latch.setAttr(Pin::Attr::Output);
             _data.setAttr(Pin::Attr::Input);
 
-            xTaskCreatePinnedToCore(SerInBusTask,
-                "SerInBusTask",
-                4096,
-                NULL,
-                1,
-                nullptr,
-                CONFIG_ARDUINO_RUNNING_CORE);
+            // if the SERIN bus is created in the yaml, but
+            // there are no pins, we go ahead and set the pin
+            // attributes above, but do not start the task.
+
+            if (m_num_poll_bytes)
+            {
+                xTaskCreatePinnedToCore(SerInBusTask,
+                    "SerInBusTask",
+                    4096,
+                    NULL,
+                    1,
+                    nullptr,
+                    CONFIG_ARDUINO_RUNNING_CORE);
+            }
         }
         else
         {
@@ -92,13 +115,21 @@ namespace Machine
     {
         _latch.write(1);    // digitalWrite(G_PIN_74HC165_LATCH, HIGH);
 
-        auto clkPin = _clk.getNative(Pin::Capabilities::Output | Pin::Capabilities::Native);
-        auto latchPin  = _latch.getNative(Pin::Capabilities::Output | Pin::Capabilities::Native);
-        auto dataPin = _data.getNative(Pin::Capabilities::Input | Pin::Capabilities::Native);
+        // note, I have not actually tested this yet with more than
+        // one 74HC165
 
-		m_value = shiftIn(dataPin,clkPin, MSBFIRST);
+        for (int i=0; i<m_num_poll_bytes; i++)
+        {
+            uint32_t val = shiftIn(m_data_pin,m_clk_pin, MSBFIRST);
+            m_value |= val << (8 * i);
+        }
 
 		_latch.write(0);    // digitalWrite(G_PIN_74HC165_LATCH, LOW);
+
+        // dispatch fake interrupts
+        // loop could be slightly optimized by keeping track
+        // of the highest SERIN pin with an interrupt, but for
+        // now we check as many bytes as we poll.
 
         static uint32_t last_value = 0;
         if (last_value != m_value)
@@ -106,7 +137,7 @@ namespace Machine
             // log_debug("m_value_changed to " << String(m_value,HEX));
             if (m_fake_interrupt_mask)
             {
-                for (int i=0; i<Pins::SerInPinDetail::nSerInPins; i++)
+                for (int i=0; i<m_num_poll_bytes*8-1; i++)
                 {
                     uint32_t mask = 1 << i;
                     if ((m_fake_interrupt_mask & mask) &&

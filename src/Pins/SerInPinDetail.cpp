@@ -12,16 +12,15 @@
 
 namespace Pins
 {
-    std::vector<bool> SerInPinDetail::_claimed(nSerInPins, false);
-
     SerInPinDetail::SerInPinDetail(pinnum_t index, const PinOptionsParser& options) :
         PinDetail(index),
         _capabilities(PinCapabilities::Input | PinCapabilities::SerIn | PinCapabilities::ISR),
         _attributes(Pins::PinAttributes::Undefined),
         _readWriteMask(0)
     {
-        Assert(index < nSerInPins, "Pin number is greater than max %d", nSerInPins - 1);
-        Assert(!_claimed[index], "Pin is already used.");
+        bool claimed = Machine::SerInBus::getPinsUsed() & (1 << index);
+        Assert(index < Machine::SerInBus::s_max_pins-1, "Pin number is greater than max %d", Machine::SerInBus::s_max_pins-1);
+        Assert(!claimed, "Pin is already used.");
 
         // User defined pin capabilities
 
@@ -40,13 +39,11 @@ namespace Pins
                 Assert(false, "Unsupported SERIN option '%s'", opt());
             }
         }
-        Machine::SerInBus::pins_defined = true;
 
-        _claimed[index] = true;
+        Machine::SerInBus::setPinUsed(index);
 
         // readWriteMask is xor'ed with the value to invert it if active low
         _readWriteMask = _attributes.has(PinAttributes::ActiveLow);
-        // log_debug("SERIN readwrite mask=" << _readWriteMask);
     }
 
 
@@ -103,10 +100,11 @@ namespace Pins
     }
 
 
-
-    String SerInPinDetail::toString() {
+    String SerInPinDetail::toString()
+    {
         auto s = String("SERIN.") + int(_index);
-        if (_attributes.has(PinAttributes::ActiveLow)) {
+        if (_attributes.has(PinAttributes::ActiveLow))
+        {
             s += ":low";
         }
         return s;

@@ -61,7 +61,7 @@ namespace Machine {
 
     void MachineConfig::afterParse() {
 
-        Assert(_serin || !SerInBus::pins_defined,"SerIn bus section must exist to use SERIN pins");
+        Assert(_serin || !SerInBus::getPinsUsed(),"SerIn bus section must exist to use SERIN pins");
 
         if (_axes == nullptr) {
             log_info("Axes: using defaults");

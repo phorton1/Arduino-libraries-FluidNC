@@ -15,14 +15,10 @@ namespace Pins
         PinAttributes   _attributes;
         int             _readWriteMask;
 
-        static std::vector<bool> _claimed;
-
         void (*m_callback)(void*) = nullptr;
         void *m_cb_arg = nullptr;
 
     public:
-
-        static const int nSerInPins = 8;
 
         SerInPinDetail(pinnum_t index, const PinOptionsParser& options);
 
@@ -42,7 +38,6 @@ namespace Pins
 
         ~SerInPinDetail() override
         {
-            _claimed[_index] = false;
         }
     };
 }

@@ -95,7 +95,6 @@ PinMapper::~PinMapper() {
     }
 }
 
-#ifdef OVERRIDE_CORE_PIN_METHODS
 
 // Arduino compatibility functions, which basically forward the call to the mapper:
 void IRAM_ATTR digitalWrite(pinnum_t pin, uint8_t val) {
@@ -143,5 +142,3 @@ int IRAM_ATTR digitalRead(pinnum_t pin) {
     auto thePin = PinMap::instance()._mapping[pin - PinMap::BOUNDARY];
     return (thePin) ? thePin->read() : 0;
 }
-
-#endif  // OVERRIDE_CORE_PIN_METHODS

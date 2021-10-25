@@ -38,6 +38,7 @@ namespace Machine {
         handler.section("stepping", _stepping);
         handler.section("axes", _axes);
         handler.section("i2so", _i2so);
+        handler.section("serin", _serin);
         handler.section("spi", _spi);
         handler.section("sdcard", _sdCard);
         handler.section("control", _control);
@@ -59,6 +60,9 @@ namespace Machine {
     }
 
     void MachineConfig::afterParse() {
+
+        Assert(_serin || !SerInBus::pins_defined,"SerIn bus section must exist to use SERIN pins");
+
         if (_axes == nullptr) {
             log_info("Axes: using defaults");
             _axes = new Axes();
@@ -284,6 +288,7 @@ namespace Machine {
     MachineConfig::~MachineConfig() {
         delete _axes;
         delete _i2so;
+        delete _serin;
         delete _coolant;
         delete _probe;
         delete _sdCard;

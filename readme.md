@@ -42,13 +42,28 @@ to the Arduino IDE using the *Boards Manager*
 - add the [**Arduino ESP32 filesystem uploader**](https://github.com/me-no-dev/arduino-esp32fs-plugin)
 to your Arduino Sketch "tools" folder
 
+When you Build/Upload your sketch, use these Settings:
+
+- select the **ESP32 Dev Module** board from the Arduino *Tools-Boards* menu
+- select the **Minimal SPIFFS** (1.9MB App with OTA/190KB SPIFFS) from the *Tools-Partition Scheme* menu
+- select the correct **COM Port** for the ESP32
+- build and upload the firmware using the Arduino IDE **Verify/Compile/Upload** commands
+
+And to prepare the **SPIFFS** on the ESP32:
+
+- copy the *data folder* from FluidNC to your sketch folder
+- upload the contents of the *data folder* in from sketch folder
+  to the ESP32 *SPIFFS* using the **Tools - ESP32 Sketch Data Upload** command
 
 
 ## Extending
 
 The modifications I have made to FluidNC are specifically intended
-allow you to create CNC machines that implement features and utilize libraries not present
-or normally available in the FluidNC codebase.
+allow one to create CNC machines that implement features and utilize
+libraries not present or normally available in the FluidNC codebase
+and to allow the library to be used from within the Arduino IDE.
+
+I have also added a minor feature here or there.
 
 I have created two different CNC machines that are based on this library that
 extend the functionality of the FluidNC codebase;
@@ -74,11 +89,15 @@ and (optional) **ws2812b LEDs** to the the system.
 Here is, more or less, a change list of the things I have changed from the
 main FluidNC branch:
 
-- Extendable **MachineConfig** - You can now derive from the Machine::MachineConfig class
+- Extendable **MachineConfig** - You can derive from the Machine::MachineConfig class
 and add a parameterized "machine" to the system.  The two examples show how you
 can create named parameters and add functionality to the FluidNC codebase.  This
 is a simple change to just allow you to instantiate the object and have FluidNC use
 it if you have done so.
+
+- Implemented SERI bus and pins to allow you to have upto 32 digital inputs using
+only 3 pins on the ESP32 with chained 74HC165 chips.  This feature is used in my
+[**esp32_cnc301832**](https://github.com/phorton1/Arduino-esp32_cnc3018) project.
 
 - Changed the name of **Limits.h** and cpp - The FluidNC team does not fully support
 this usage of their library.  Unfortunately, when I move the inner folder to the
@@ -89,12 +108,7 @@ which causes problems, so I renamed it, and all usages to **Glimits**.
 - Implemented WEAK_LINK hooks for **YamlOverrides** - to allow for the persistent setting
 of $ parameters.  They are stored in a file on the SPIFFS.
 
-- Made the **Probe** class into a base class that can be derived from, so my derived cnc3018
-machine could implement the probe (and limit switches) via a 74HC165 IO multiplexer chip.
-
-- #ifdef'd out FluidNC's overrides of core Arduino **pinMode, digitalWrite, and digtalRead**
-methods SPECIFICALLY so that the library can be used in conjunction with the 1000's of existing
-available Arduino libraries, including particulaly TFT_ESPI, Adafruit Neopixels, and so on.
+= Implemented WEAK_LINK hook for user_realtime_command()
 
 - renamed *Main.h and cpp** to **FluidNC.h and cpp** and changed the names of their setup() and
 loop() methods to **main_init()** and **run_once()** so as to not presume ownership of the global
@@ -102,6 +116,7 @@ Arduino methods which are owned by YOUR sketch.
 
 - Various other changes to support things, remove spurious debugging, and generally to make it
 work like I expect, and want it to work.
+
 
 <br>
 

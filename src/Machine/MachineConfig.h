@@ -21,7 +21,7 @@
 #include "Axes.h"
 #include "SPIBus.h"
 #include "I2SOBus.h"
-#include "SerinBus.h"
+#include "I2SIBus.h"
 #include "UserOutputs.h"
 #include "Macros.h"
 
@@ -58,7 +58,7 @@ namespace Machine {
         Axes*           _axes        = nullptr;
         SPIBus*         _spi         = nullptr;
         I2SOBus*        _i2so        = nullptr;
-        SerInBus*       _seri        = nullptr;
+        I2SIBus*       _i2si        = nullptr;
         Stepping*       _stepping    = nullptr;
         CoolantControl* _coolant     = nullptr;
         Probe*          _probe       = nullptr;

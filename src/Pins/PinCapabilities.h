@@ -43,7 +43,7 @@ namespace Pins {
         // can compare classes of pins along with their properties by just looking at the capabilities.
         static PinCapabilities Native;
         static PinCapabilities I2S;
-        static PinCapabilities SERI;
+        static PinCapabilities I2SI;
         static PinCapabilities Error;
         static PinCapabilities Void;
 

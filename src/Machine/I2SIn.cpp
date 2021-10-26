@@ -12,7 +12,7 @@
 // for the big configuration object.
 
 #include "I2SIn.h"
-#include "SerInBus.h"
+#include "I2SIBus.h"
 
 #include "../Logging.h"
 
@@ -459,7 +459,7 @@ static void IRAM_ATTR i2s_in_intr_handler(void* arg)
 
         // Get the descriptor of the last item in the linked list, then
         // get the value from it's buffer, shift it as needed, and if
-        // changed, hand it off to the SerInBus for handling
+        // changed, hand it off to the I2SIBus for handling
 
         lldesc_t* finish_desc = (lldesc_t*)I2S1.in_eof_des_addr;
         uint32_t *buf_ptr = (uint32_t*)finish_desc->buf;
@@ -469,7 +469,7 @@ static void IRAM_ATTR i2s_in_intr_handler(void* arg)
         if (i2s_in_value != value)
         {
             i2s_in_value = value;
-            Machine::SerInBus::handleValueChange(i2s_in_value);
+            Machine::I2SIBus::handleValueChange(i2s_in_value);
         }
    }
 

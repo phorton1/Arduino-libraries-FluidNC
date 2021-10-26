@@ -38,7 +38,7 @@ namespace Machine {
         handler.section("stepping", _stepping);
         handler.section("axes", _axes);
         handler.section("i2so", _i2so);
-        handler.section("seri", _seri);
+        handler.section("i2si", _i2si);
         handler.section("spi", _spi);
         handler.section("sdcard", _sdCard);
         handler.section("control", _control);
@@ -61,7 +61,7 @@ namespace Machine {
 
     void MachineConfig::afterParse() {
 
-        Assert(_seri || !SerInBus::getPinsUsed(),"SERI bus section must exist to use SERI pins");
+        Assert(_i2si || !I2SIBus::getPinsUsed(),"I2SI bus section must exist to use I2SI pins");
 
         if (_axes == nullptr) {
             log_info("Axes: using defaults");
@@ -288,7 +288,7 @@ namespace Machine {
     MachineConfig::~MachineConfig() {
         delete _axes;
         delete _i2so;
-        delete _seri;
+        delete _i2si;
         delete _coolant;
         delete _probe;
         delete _sdCard;

@@ -11,7 +11,7 @@
 
 namespace Pins
 {
-    class SerInPinDetail : public PinDetail
+    class I2SIPinDetail : public PinDetail
     {
         PinCapabilities _capabilities;
         PinAttributes   _attributes;
@@ -22,7 +22,7 @@ namespace Pins
 
     public:
 
-        SerInPinDetail(pinnum_t index, const PinOptionsParser& options);
+        I2SIPinDetail(pinnum_t index, const PinOptionsParser& options);
 
         PinCapabilities capabilities() const override;
         PinAttributes getAttr() const override  { return _attributes; }
@@ -38,9 +38,8 @@ namespace Pins
 
         String toString() override;
 
-        ~SerInPinDetail() override
-        {
-        }
+        ~I2SIPinDetail() override {}
+
     };
 }
 

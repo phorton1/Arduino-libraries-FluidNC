@@ -6,17 +6,17 @@
 #pragma once
 
 #include "../Configuration/Configurable.h"
-#include "Pins/SerInPinDetail.h"
+#include "Pins/I2SIPinDetail.h"
 
 
 namespace Machine {
-    class SerInBus : public Configuration::Configurable {
-        // A Serial Input Bus for SERI pins using 74HC165 or similar.
+    class I2SIBus : public Configuration::Configurable {
+        // A Serial Input Bus for I2SI pins using 74HC165 or similar.
         // Supports upto 32 inputs using 3 ESP32 Native pins.
         // Optionally uses I2SInput and real interrupts (2000 times per second)
         // or a task and shiftIn() to poll the 74HC165 100 times per second.
         // Clients call "value()" to get the most recent state.
-        // In conjunction with SerInPinDetail, can emulate/implement ISR's with
+        // In conjunction with I2SIPinDetail, can emulate/implement ISR's with
         // attachFakeInterrupt() and detachFakeInterrupt() calls,
         // which are real if .
 
@@ -32,7 +32,7 @@ namespace Machine {
             // pin.  So if the yaml file only declares 0..5, only one
             // 74HC165 will be polled.
 
-        SerInBus() = default;
+        I2SIBus() = default;
 
         void init();
 
@@ -52,7 +52,7 @@ namespace Machine {
             return s_pins_used;
         }
 
-        void attachInterrupt(int pin_num, Pins::SerInPinDetail *pd)
+        void attachInterrupt(int pin_num, Pins::I2SIPinDetail *pd)
         {
             if (pin_num + 1 > s_highest_interrupt)
                 s_highest_interrupt = pin_num + 1;
@@ -64,7 +64,7 @@ namespace Machine {
             s_interrupt_mask &= ~(1 << pin_num);
         }
 
-        ~SerInBus() = default;
+        ~I2SIBus() = default;
 
         static void IRAM_ATTR handleValueChange(uint32_t value);
             // called directly from I2S interrupt handler and/or
@@ -78,17 +78,17 @@ namespace Machine {
 
         // config
 
-        Pin _clk;
-        Pin _latch;
+        Pin _bck;
+        Pin _ws;
         Pin _data;
         bool _use_shift_in = false;
         static int _s_num_chips;
 
         // native pins
 
-        int m_clk_pin;          // BCK for I2S
-        int m_latch_pin;        // WS for I2S
-        int m_data_pin;         // DATA for I2S
+        int m_bck_pin;          // CLK for shiftIn
+        int m_ws_pin;           // LATCH for shiftIn
+        int m_data_pin;         // DATA for shiftIn
 
         // implementation
 
@@ -96,7 +96,7 @@ namespace Machine {
         static uint32_t s_pins_used;
         static int s_highest_interrupt;    // pinnum+1
         static uint32_t s_interrupt_mask;
-        static Pins::SerInPinDetail *s_int_pins[s_max_pins];
+        static Pins::I2SIPinDetail *s_int_pins[s_max_pins];
 
         // methods
 

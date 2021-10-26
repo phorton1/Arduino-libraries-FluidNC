@@ -8,29 +8,21 @@
 #include "Logging.h"
 #include <Arduino.H>        // MSBFIRST for ahiftIn()
 #include "Machine/MachineConfig.h"
+#include "I2SIn.h"
 
 
-// It's probably possible to implement I2SI pins and an I2SInBus as well
-// (should be "I2SO" pins) that round-robin's using DMA.  The main difference
-// would be that it would quicker and not use as much Core CPU time. But
-// it is non-trivial and not clearly worth the effort.  This works.
-//
-// Polling in a task loop is not good for probes, not so bad for limit switches.
-// I don't really want this thing to "know" about the probing state and try to
-// make it a tiny bit more reponsive by allowing Probe to somehow call a
-// synchronousRead() method ... which would also have to have to MUX on a read()
-// in progress anyways.
-//
-// Don't like the hardwired number of pins.  It should allow for upto 32,
-// yet somehow be efficient and only poll chunks of 8 as needed.
-//
-// LOL, wonder if you could implement this in terms of I2SO pins.
-// For now I am (trying) to limit it to native GPIO pins.
+// #define MONITOR_SHIFTIN
 
 
 namespace Machine
 {
     uint32_t SerInBus::s_pins_used = 0;
+    int SerInBus::_s_num_chips= 1;
+    uint32_t SerInBus::s_value = 0;
+    int SerInBus::s_highest_interrupt = 0;    // pinnum+1
+    uint32_t SerInBus::s_interrupt_mask = 0;
+    Pins::SerInPinDetail *SerInBus::s_int_pins[s_max_pins];
+
 
     void SerInBus::validate() const
     {
@@ -39,15 +31,18 @@ namespace Machine
             Assert(_clk.defined(), "SERI CLK pin must be configured");
             Assert(_latch.defined(),"SERI Latch pin must be configured");
             Assert(_data.defined(), "SERI Data pin must be configured");
+            Assert(_s_num_chips>0 && _s_num_chips<5,"SERI num_chips must be 1..4");
         }
     }
 
 
     void SerInBus::group(Configuration::HandlerBase& handler)
     {
-        handler.item("clk_pin", _clk);
-        handler.item("latch_pin", _latch);
-        handler.item("data_pin", _data);
+        handler.item("clk_pin",      _clk);
+        handler.item("latch_pin",    _latch);
+        handler.item("data_pin",     _data);
+        handler.item("use_shift_in", _use_shift_in);
+        handler.item("num_chips",    _s_num_chips);
     }
 
 
@@ -57,7 +52,6 @@ namespace Machine
             _latch.defined() &&
             _data.defined())
         {
-
             m_clk_pin = _clk.getNative(Pin::Capabilities::Output | Pin::Capabilities::Native);
             m_latch_pin  = _latch.getNative(Pin::Capabilities::Output | Pin::Capabilities::Native);
             m_data_pin = _data.getNative(Pin::Capabilities::Input | Pin::Capabilities::Native);
@@ -65,43 +59,45 @@ namespace Machine
             Assert(m_clk_pin, "could not get Native SERI CLK_pin");
             Assert(m_latch_pin,"could not get Native SERI Latch_pin");
             Assert(m_data_pin, "could not get Native SERI Data_pin");
+            Assert(_s_num_chips>0 && _s_num_chips<5,"num_chips must be 1..4");
 
-            // set the number of byte to poll based on the
-            // highest SERI pin number used ..
+            log_info(
+                "SERI CLK:" << _clk.name() <<
+                " LATCH:" << _latch.name() <<
+                " DATA:" << _data.name() <<
+                (_use_shift_in?"SHIFT_IN!! ":"") <<
+                " num_chips:" << _s_num_chips);
 
-            for (int i=s_max_pins-1; i>=0; i--)
-            {
-                if (s_pins_used & (1 << i))
-                {
-                    m_num_poll_bytes = (i + 1) / 8;
-                    break;
-                }
-            }
+            // log_debug(" pins_used=" << String(s_pins_used,HEX));
 
-            log_info("SERI CLK:" << _clk.name() << " LATCH:" << _latch.name() << " DATA:" << _data.name() << " bytes:" << m_num_poll_bytes);
-
-            if (!m_num_poll_bytes)
+            if (!s_pins_used)
             {
                 log_info("NOTE: SERI bus defined but no SERI pins defined");
+                return;
             }
 
             _clk.setAttr(Pin::Attr::Output);
             _latch.setAttr(Pin::Attr::Output);
             _data.setAttr(Pin::Attr::Input);
 
-            // if the SERI bus is created in the yaml, but
-            // there are no pins, we go ahead and set the pin
-            // attributes above, but do not start the task.
-
-            if (m_num_poll_bytes)
+            if (_use_shift_in)
             {
-                xTaskCreatePinnedToCore(SerInBusTask,
-                    "SerInBusTask",
+                xTaskCreatePinnedToCore(
+                    shiftInTask,
+                    "shiftInTask",
                     4096,
                     NULL,
                     1,
                     nullptr,
                     CONFIG_ARDUINO_RUNNING_CORE);
+            }
+            else
+            {
+                i2s_in_init(
+                    m_latch_pin,        // ws
+                    m_clk_pin,          // bck
+                    m_data_pin,         // data
+                    _s_num_chips);
             }
         }
         else
@@ -113,64 +109,76 @@ namespace Machine
     }
 
 
-    uint32_t SerInBus::read()
+    uint32_t SerInBus::shiftInValue()
+        // Only called from the !i2s task, shift in
+        // 8 bits for each 74HC165 chip, ending with
+        // the first one in the chain in the LSB nibble
     {
-        // note, I have not actually tested this yet with more than
-        // one 74HC165, but it *should* work.
-
-        _latch.write(1);    // digitalWrite(G_PIN_74HC165_LATCH, HIGH);
-
+        _latch.write(1);
         uint32_t value = 0;
-        for (int i=0; i<m_num_poll_bytes; i++)
+        for (int i=0; i<_s_num_chips; i++)
         {
             uint32_t val = shiftIn(m_data_pin,m_clk_pin, MSBFIRST);
-            value |= val << (8 * i);
+            value  = value << 8 | val;
         }
-        m_value = value;
+        _latch.write(0);
+        // log_debug("SerinBus shiftInValue=" << String(value,HEX));
+        return value;
+    }
 
-		_latch.write(0);    // digitalWrite(G_PIN_74HC165_LATCH, LOW);
 
-        // dispatch fake interrupts
-        // loop could be slightly optimized by keeping track
-        // of the highest SERI pin with an interrupt, but for
-        // now we check as many bytes as we poll.
 
-        static uint32_t last_value = 0;
-        if (last_value != m_value)
+    // static
+    void IRAM_ATTR SerInBus::handleValueChange(uint32_t value)
+        // This method is called as a real interrupt handler, directly from
+        // the I2S isr if !_use_shift_in.  So serial debugging is generally not allowed.
+        // The debugging can only be turned on manually when _use_shift_in ..
+    {
+        // log_debug("handleValueChange(" << String(value,HEX) << ") s_value=" << String(s_value,HEX));
+        // log_debug("int_mask=" << String(s_interrupt_mask,HEX) << " highest=" << s_highest_interrupt);
+
+        uint32_t prev = s_value;
+        s_value = value;
+        if (s_interrupt_mask)
         {
-            // log_debug("m_value_changed to " << String(m_value,HEX));
-            if (m_fake_interrupt_mask)
+            for (int i=0; i<s_highest_interrupt; i++)
             {
-                for (int i=0; i<m_num_poll_bytes*8; i++)
+                uint32_t mask = 1 << i;
+                if ((s_interrupt_mask & mask) &&
+                    (prev & mask) != (value & mask))
                 {
-                    uint32_t mask = 1 << i;
-                    if ((m_fake_interrupt_mask & mask) &&
-                        (last_value & mask) != (m_value & mask))
-                    {
-                        // log_debug("issuing SERI fake Interrupt");
-                        m_int_pins[i]->doFakeInterrupt();
-                    }
+                    // log_debug("issuing SERI Interrupt " << i);
+                    s_int_pins[i]->doInterrupt();
                 }
             }
-
-            last_value = m_value;
         }
-
-        return m_value;
     }
 
 
     // static
-    void SerInBus::SerInBusTask(void *params)
+    void SerInBus::shiftInTask(void *params)
     {
         SerInBus *self = config->_seri;
         Assert(self);
-
         while (1)
         {
-            vTaskDelay(1);      // 100 times a second
-            // if !probing
-            self->read();
+            vTaskDelay(10);      // 100 times a second
+            uint32_t value = self->shiftInValue();
+            if (s_value != value)
+                handleValueChange(value);
+
+            #ifdef MONITOR_SHIFTIN
+                static uint32_t last_out = 0;
+                static uint32_t shift_counter = 0;
+
+                shift_counter++;
+                uint32_t now = millis();
+                if (now > last_out + 2000)  // every 2 seconds
+                {
+                    last_out = now;
+                    log_debug("shift counter=" << shift_counter << " value=" << String(s_value,HEX));
+                }
+            #endif
         }
     }
 

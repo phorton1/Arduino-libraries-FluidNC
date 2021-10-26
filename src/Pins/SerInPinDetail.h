@@ -5,7 +5,9 @@
 #pragma once
 #ifdef ESP32
 
-#    include "PinDetail.h"
+#include "PinDetail.h"
+#include <esp_attr.h>        // IRAM_ATTR
+
 
 namespace Pins
 {
@@ -32,7 +34,7 @@ namespace Pins
 
         void attachInterrupt(void (*callback)(void*), void* arg, int mode) override;
         void detachInterrupt() override;
-        void doFakeInterrupt()   { m_callback(m_cb_arg); }
+        void IRAM_ATTR doInterrupt()   { m_callback(m_cb_arg); }
 
         String toString() override;
 

@@ -67,10 +67,12 @@ namespace Pins
         Assert(0,"synchronousWrite() to SERI Pins not allowed");
     }
 
-    int SerInPinDetail::read()
+    int IRAM_ATTR SerInPinDetail::read()
     {
         uint32_t value = config->_seri->value();
-        return ((value >> _index) & 1) ^ _readWriteMask;
+        uint32_t retval = ((value >> _index) & 1) ^ _readWriteMask;
+        // log_debug("read(" << _index << ") got value=" << value << " returning " << retval);
+        return retval;
     }
 
 
@@ -85,16 +87,17 @@ namespace Pins
 
     void SerInPinDetail::attachInterrupt(void (*callback)(void*), void* arg, int mode)
     {
+        // log_debug("attach interrupt " << _index);
         Assert(mode == CHANGE);
         m_callback = callback;
         m_cb_arg = arg;
-        config->_seri->attachFakeInterrupt(_index,this);
+        config->_seri->attachInterrupt(_index,this);
     }
 
 
     void SerInPinDetail::detachInterrupt()
     {
-        config->_seri->detachFakeInterrupt(_index);
+        config->_seri->detachInterrupt(_index);
         m_callback = nullptr;
         m_cb_arg = nullptr;
     }

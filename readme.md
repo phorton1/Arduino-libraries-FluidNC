@@ -95,7 +95,7 @@ can create named parameters and add functionality to the FluidNC codebase.  This
 is a simple change to just allow you to instantiate the object and have FluidNC use
 it if you have done so.
 
-- Implemented SERI bus and pins to allow you to have upto 32 digital inputs using
+- Implemented I2SI bus and pins to allow you to have upto 32 digital inputs using
 only 3 pins on the ESP32 with chained 74HC165 chips.  This feature is used in my
 [**esp32_cnc301832**](https://github.com/phorton1/Arduino-esp32_cnc3018) project.
 

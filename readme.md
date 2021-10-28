@@ -102,13 +102,13 @@ only 3 pins on the ESP32 with chained 74HC165 chips.  This feature is used in my
 - Changed the name of **Limits.h** and cpp - The FluidNC team does not fully support
 this usage of their library.  Unfortunately, when I move the inner folder to the
 Arduino/library level, the Arduino IDE "sees" a file named "limits.h" as a replacement
-for the C standard header of the same name. LOL, it ends up getting included in Arduino.h
+for the C standard header of the same name. It ends up getting included in Arduino.h
 which causes problems, so I renamed it, and all usages to **Glimits**.
 
 - Implemented WEAK_LINK hooks for **YamlOverrides** - to allow for the persistent setting
 of $ parameters.  They are stored in a file on the SPIFFS.
 
-= Implemented WEAK_LINK hook for user_realtime_command()
+- Implemented WEAK_LINK hook for user_realtime_command()
 
 - renamed *Main.h and cpp** to **FluidNC.h and cpp** and changed the names of their setup() and
 loop() methods to **main_init()** and **run_once()** so as to not presume ownership of the global

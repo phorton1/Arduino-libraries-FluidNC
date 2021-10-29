@@ -108,14 +108,14 @@ which causes problems, so I renamed it, and all usages to **Glimits**.
 - Implemented WEAK_LINK hooks for **YamlOverrides** - to allow for the persistent setting
 of $ parameters.  They are stored in a file on the SPIFFS.
 
-- Implemented WEAK_LINK hook for user_realtime_command()
+- Implemented WEAK_LINK hook for **user_realtime_command()**
 
 - renamed *Main.h and cpp** to **FluidNC.h and cpp** and changed the names of their setup() and
-loop() methods to **main_init()** and **run_once()** so as to not presume ownership of the global
-Arduino methods which are owned by YOUR sketch.
+loop() methods (back) to **main_init()** and **run_once()** so as to not presume ownership of
+the global Arduino methods which are owned by YOUR sketch.
 
-- Various other changes to support things, remove spurious debugging, and generally to make it
-work like I expect, and want it to work.
+- Various other changes to support things and generally to make it
+work like I want it to work.
 
 
 <br>

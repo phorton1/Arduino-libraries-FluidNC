@@ -11,7 +11,7 @@
 #include "I2SIn.h"
 
 
-#define MONITOR_SHIFTIN
+// #define MONITOR_SHIFTIN
 
 
 namespace Machine

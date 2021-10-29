@@ -522,7 +522,7 @@ static void IRAM_ATTR i2s_in_intr_handler(void* arg)
         // get the value from it's buffer, shift it as needed, and if
         // changed, hand it off to the I2SIBus for handling
 
-        lldesc_t* finish_desc = (lldesc_t*)I2S1.in_link_dscr;   // in_eof_des_addr;
+        lldesc_t* finish_desc = (lldesc_t*)I2S1.in_eof_des_addr;    // in_link_dscr;
         uint32_t *buf_ptr = (uint32_t*)finish_desc->buf;
         uint32_t value = *buf_ptr;    // 1 sample per buffer
         value >>= (4 - i2s_in_num_chips) *8;

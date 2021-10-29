@@ -9,7 +9,7 @@
 //
 // Use of this source code is governed by a GPLv3 license that can be found in the LICENSE file.
 // See https://gitlab.unizar.es/761347/esp-idf/blob/11c1da5276421569e8e2cfd5828d543dc7cbfec3/components/soc/esp32/include/soc/i2s_struct.h
-// for the big configuration object.
+// for the data structure that maps to the register addresses for I2S1 starting at 0x3FF6D000
 
 #include "I2SIn.h"
 #include "I2SIBus.h"
@@ -26,11 +26,21 @@
 #include <stdatomic.h>
 
 
-// #define MONITOR_I2S_IN
+#define MONITOR_I2S_IN
 
 
 #ifdef MONITOR_I2S_IN
-    static uint32_t i2s_in_counter = 0;
+    static uint32_t count_int =           0;
+    static uint32_t count_chgs =          0;
+    // static uint32_t count_rx_take_data =  0;
+    // static uint32_t count_rx_wfull =      0;
+    // static uint32_t count_rx_rempty =     0;
+    // static uint32_t count_rx_hung =       0;
+    static uint32_t count_in_done =       0;
+    static uint32_t count_in_suc_eof =    0;
+    // static uint32_t count_in_dscr_err =   0;
+    // static uint32_t count_in_err_eof =    0;
+    // static uint32_t count_in_dscr_empty = 0;
     static void monitorI2SInTask(void* parameter);
 #endif
 
@@ -39,17 +49,17 @@
 
 #define I2S_IN_NUM_BITS  32     // 32 required (16 not tested) for FluidNC
 
-static const int I2S_IN_DMABUF_COUNT  = 4;     // number of DMA buffers to store data
-static const int I2S_IN_DMABUF_LEN    = 8;     // each buffer holds one 1 pair of L/R 32 bit samples (we only use the R)
-static const int I2S_SAMPLE_SIZE      = 4;     // 4 bytes, 32 bits per sample
-static const int DMA_SAMPLE_COUNT     = I2S_IN_DMABUF_LEN / I2S_SAMPLE_SIZE;  // there are two samples per buffer (we only use one)
+static const int I2S_IN_DMABUF_COUNT  = 4;     // units, number of DMA buffers to store data
+static const int I2S_IN_DMABUF_LEN    = 8;     // bytes; each buffer holds one 1 pair of L/R 32 bit samples (we only use the R)
+static const int I2S_IN_SAMPLE_SIZE   = sizeof(uint32_t);     // 4 bytes, 32 bits per sample
+static const int DMA_SAMPLE_COUNT     = I2S_IN_DMABUF_LEN / I2S_IN_SAMPLE_SIZE;  // there are two samples per buffer (we only use one)
 
 typedef struct {
     uint32_t**   buffers;
     uint32_t*    current;
     uint32_t     rw_pos;
     lldesc_t**   desc;
-    xQueueHandle queue;
+    // xQueueHandle queue;
 } i2s_in_dma_t;
 
 
@@ -57,7 +67,6 @@ static pinnum_t i2s_in_ws_pin    = 0;
 static pinnum_t i2s_in_bck_pin   = 0;
 static pinnum_t i2s_in_data_pin  = 0;
 static int      i2s_in_num_chips = 0;
-
 
 static i2s_in_dma_t i_dma;
 static intr_handle_t i2s_in_isr_handle;
@@ -134,7 +143,6 @@ static int i2s_clear_dma_buffer(lldesc_t* dma_desc)
     {
         buf[i] = 0;
     }
-    dma_desc->length = I2S_IN_DMABUF_LEN;
     return 0;
 }
 
@@ -143,11 +151,11 @@ static int i2s_clear_i_dma_buffers()
 {
     for (int buf_idx = 0; buf_idx < I2S_IN_DMABUF_COUNT; buf_idx++)
     {
-        i_dma.desc[buf_idx]->owner        = 1;
-        i_dma.desc[buf_idx]->eof          = 1;  // set to 1 will trigger the interrupt
+        i_dma.desc[buf_idx]->owner        = 1;  // 1 == "the allowed operator is the DMA controller"
+        i_dma.desc[buf_idx]->eof          = 0;  // does nothing on rx
         i_dma.desc[buf_idx]->sosf         = 0;
-        i_dma.desc[buf_idx]->length       = I2S_IN_DMABUF_LEN;
-        i_dma.desc[buf_idx]->size         = I2S_IN_DMABUF_LEN;
+        i_dma.desc[buf_idx]->length       = 0;                      // "number of valid bytes in the buffer"
+        i_dma.desc[buf_idx]->size         = I2S_IN_DMABUF_LEN;      // "the size of the buffer"
         i_dma.desc[buf_idx]->buf          = (uint8_t*)i_dma.buffers[buf_idx];
         i_dma.desc[buf_idx]->offset       = 0;
         i_dma.desc[buf_idx]->qe.stqe_next = (lldesc_t*)((buf_idx < (I2S_IN_DMABUF_COUNT - 1)) ? (i_dma.desc[buf_idx + 1]) : i_dma.desc[0]);
@@ -214,7 +222,7 @@ void i2s_in_init(pinnum_t ws, pinnum_t bck, pinnum_t data, int num_chips)
     i2s_clear_i_dma_buffers();
     i_dma.rw_pos  = 0;
     i_dma.current = NULL;
-    i_dma.queue   = xQueueCreate(I2S_IN_DMABUF_COUNT, sizeof(uint32_t*));
+    // i_dma.queue   = xQueueCreate(I2S_IN_DMABUF_COUNT, sizeof(uint32_t*));
 
     // Set the first DMA descriptor
 
@@ -227,6 +235,7 @@ void i2s_in_init(pinnum_t ws, pinnum_t bck, pinnum_t data, int num_chips)
     I2S1.int_clr.val = I2S1.int_st.val;  //clear pending interrupt
 
     //reset i2s
+    // This register is at 0x3ff6d008
 
     I2S1.conf.tx_reset = 1;
     I2S1.conf.tx_reset = 0;
@@ -248,9 +257,9 @@ void i2s_in_init(pinnum_t ws, pinnum_t bck, pinnum_t data, int num_chips)
     I2S1.lc_conf.ahbm_rst           = 0;
     I2S1.lc_conf.out_loop_test      = 0;
     I2S1.lc_conf.in_loop_test       = 0;
-    I2S1.lc_conf.out_auto_wrback    = 0;  // Disable auto outlink-writeback when all the data has been transmitted
+    I2S1.lc_conf.out_auto_wrback    = 0;
     I2S1.lc_conf.out_no_restart_clr = 0;
-    I2S1.lc_conf.out_eof_mode       = 1;  // I2S_IN_EOF_INT generated when DMA has popped all data from the FIFO;
+    I2S1.lc_conf.out_eof_mode       = 0;
     I2S1.lc_conf.outdscr_burst_en   = 0;
     I2S1.lc_conf.indscr_burst_en    = 0;
     I2S1.lc_conf.out_data_burst_en  = 0;
@@ -264,19 +273,45 @@ void i2s_in_init(pinnum_t ws, pinnum_t bck, pinnum_t data, int num_chips)
 
     I2S1.fifo_conf.dscr_en = 0;
 
-    I2S1.conf_chan.rx_chan_mod = 1;  // 0-two channel;1-right;2-left;3-righ;4-left
+    // there is a "channel mode" and a "fifo mode"
+    //
+    // the "fifo mode" is
+    //     0 == "16-bit dual channel data"
+    //     1 == "16-bit single channel data"
+    //     2 == "32-bit dual channel data"
+    //     3 == "32-bit single channel data"
+    //
+    // the "channel mode" is only explained in a confusing table, in reference to "fifo_mode"
+    // with both rows and columns labelled as "modes", we assume the doc's "I2S_RX_CHAN_MOD" header
+    // applies to the column.  The "MSB_RIGHT" bit also comes into play and reverses the words
+    // "left" and "right" in the below table (and in our usage) and doubling the size of the table
+    // in the document.
+    //
+    //     FIFO MODE      0            1              2            3
+    //  CHANNEL MODE
+    //        0           left+right   -              left+right   -
+    //        1           left+right   left+left      left+right   left+left
+    //        2           left+right   right+right    left+right   right+right
+    //        3           left+right   -              left+right   -
+    //
+    // where the "dashes" presumably indicate illegal combinations.
+    // 2,2 seems the most logical and works the best for RX
+
+    I2S1.conf_chan.rx_chan_mod = 2;
     I2S1.conf_single_data      = 0;
-    I2S1.conf.rx_mono          = 0; // Set this bit to enable mono mode in PCM standard mode.
+    I2S1.conf.rx_mono          = 0;
 
 #if I2S_IN_NUM_BITS == 16
     // Not used (or tested) for FluidNC
-    I2S1.fifo_conf.tx_fifo_mod        = 0;   // 0: 16-bit dual channel data, 3: 32-bit single channel data
-    I2S1.fifo_conf.rx_fifo_mod        = 0;   // 0: 16-bit dual channel data, 3: 32-bit single channel data
+    I2S1.fifo_conf.tx_fifo_mod        = 0;
+    I2S1.fifo_conf.rx_fifo_mod        = 0;
     I2S1.sample_rate_conf.tx_bits_mod = 16;  // default is 16-bits
     I2S1.sample_rate_conf.rx_bits_mod = 16;  // default is 16-bits
 #else
-    I2S1.fifo_conf.tx_fifo_mod = 3;  // 0: 16-bit dual channel data, 3: 32-bit single channel data
-    I2S1.fifo_conf.rx_fifo_mod = 3;  // 0: 16-bit dual channel data, 3: 32-bit single channel data
+    // fifo_mode 2 delivers twice as many frame interrupts as fifo_mode 3
+    // fifo_mode 1 delivers half as many frame interrupts as fifo mode 3
+    I2S1.fifo_conf.tx_fifo_mod = 2;
+    I2S1.fifo_conf.rx_fifo_mod = 2;
     // Data width is 32-bit. Forgetting this setting will result in a 16-bit transfer.
     I2S1.sample_rate_conf.tx_bits_mod = 32;
     I2S1.sample_rate_conf.rx_bits_mod = 32;
@@ -302,58 +337,60 @@ void i2s_in_init(pinnum_t ws, pinnum_t bck, pinnum_t data, int num_chips)
     I2S1.conf.tx_msb_shift  = 0;  // Do not use the Philips standard to avoid bit-shifting
     I2S1.conf.rx_msb_shift  = 0;  // Do not use the Philips standard to avoid bit-shifting
 
+    //-----------------------------------------------------
+    // Important, empirically derived, settings:
+    //-----------------------------------------------------
+
+    I2S1.rx_eof_num = DMA_SAMPLE_COUNT;
+        // This statement says that a frame is 2 32-bit samples in length.
+        // IMPORTANT  - this actually determines the frequency of ISR  "frame success" interrupts.
+        // From the documentation: "I2S_RXEOF_NUM_REG is used for configuring the data size of a
+        // single transfer operation, in multiples of one word" where a word is 32 bits.
+        // Except it's NOT just for single transfers but for the general frame layout on RX.
+        // Without this no matter what else you do you will get a (low) constant number of
+        // frame success interrupts regardless of what you put in the i_dma.desc values.
+
+    // With the 74HC165's that I have, there was a problem that they were transmitting
+    // their data immediately upon WS going high at the same time BCK goes low.
+    // I "fixed" that with a frequency dependent capacitor tween WS and ground.
+    // After much experimentation I determined that you can influence the ESP32's interpretation
+    // of the frame so that it "works", more or less with either of the 2 settings below.
+
+    // It seems to spuriously change values.
+    // More testing is needed (on a soldered circuit board)
+    // 472 ceramic capacitor for 4Mhz BCK
+    // 104 ceramic capacitor for 500Khz BCK
+
+    // I2S1.timing.tx_bck_in_delay    = 0;    // : 2;
+    // I2S1.timing.tx_ws_in_delay     = 0;    // : 2;
+    // I2S1.timing.rx_bck_in_delay    = 0;    // : 2;
+    // I2S1.timing.rx_ws_in_delay     = 0;    // : 2;
+    // I2S1.timing.rx_sd_in_delay     = 2;    // : 2;   2 SEEMED TO WORK  3 intermittent
+    // I2S1.timing.tx_bck_out_delay   = 0;    // : 2;
+    // I2S1.timing.tx_ws_out_delay    = 0;    // : 2;
+    // I2S1.timing.tx_sd_out_delay    = 0;    // : 2;
+    I2S1.timing.rx_ws_out_delay    = 2;    // : 2;   2 SEEMED TO WORK  3 intermittent
+    // I2S1.timing.rx_bck_out_delay   = 0;    // : 2;
+    // I2S1.timing.tx_dsync_sw        = 0;    // : 1;
+    // I2S1.timing.rx_dsync_sw        = 0;    // : 1;
+    // I2S1.timing.data_enable_delay  = 0;    // : 2;
+    // I2S1.timing.tx_bck_in_inv      = 0;    // : 1;
 
     //-------------------
     // set the clock
     //-------------------
-    // set clock (fi2s) 160MHz / 20
+    // set clock (fi2s) 160MHz / N
     // frequency could be parameterized
 
     I2S1.clkm_conf.clka_en = 0;  // Use 160 MHz PLL_D2_CLK as reference
-                                 // N + b/a = 0
 #if I2S_IN_NUM_BITS == 16
     // not used or tested for FluidNC
-    // N = 10
     I2S1.clkm_conf.clkm_div_num = 10;  // minimum value of 2, reset value of 4, max 256 (I²S clock divider’s integral value)
 #else
-
-    I2S1.clkm_conf.clkm_div_num = 20;   // prh was 5;  and giving 14.7Mhz // minimum value of 2, reset value of 4, max 256 (I²S clock divider’s integral value)
-
-        // was/is 5 in I2SO giving 16Mhz
-        // 10 (at 32 bits) gives stronger 8Mhz signal and approx 4000 DMA interrupts per second
-        // 20 gives 4Mhz and starts to look like a waveform on my cheezy osciliscope, approx 2000 interrupts per second.
-        // WORKS WITH CERAMIC 472 CAPACITOR tween WS and ground!!
-
-        // 80 gives 1Mhz square wave. approx 500 interrupts per second
-        // 160 gives 512Khz, about 250 interrupts per second
-        // 160 WORKED WITH CERAMIC 104 CAPACITOR!!
-
-        // OK, I got it to work.
-        // Theory of the failure (without the capacitor):
-        // The I2S sets WS high and CLK clock down at the same time.
-        // But the 74HC165 does not wait for the next rising clock, it's like
-        // it *sees* the previous clock high.  So the 165 dumps it's 0th bit
-        // before the next (correct) transition to CLK high.
-        //
-        // Adding the capacitor between the WS and ground causes the WS
-        // to delay going high for a bit until the clock is well "down".  Then
-        // when it goes high, the 165 waits for the next clock high and everything
-        // works ok.
-        //
-        // Without the capacitor, expecting 0xFF000000 you get (weirdly due to
-        // edges) 0xFE000001 ... too big a capacitor and the FF bleeds over into
-        // subsquent nibbles 0xCFA00000 etc.
-        // On my logic analyzer, the capacitor puts the transition to WS high
-        // squarely in the middle of a low clock period and everything goes nicely.
-        //
-        // There may be another way to do this (i.e. I2S1.timing.rx_bck_in_delay = 3)
-        // but I sure couldn't find it.
-
+    I2S1.clkm_conf.clkm_div_num = 80;   // prh was 5;  and giving 14.7Mhz // minimum value of 2, reset value of 4, max 256 (I²S clock divider’s integral value)
+        // was/is 5 in I2SO giving 16Mhz -- 10=8Mhz -- 20==4Mhz
 #endif
-
-    // finishing clock ...
     // b/a = 0
-
     I2S1.clkm_conf.clkm_div_b = 0;  // 0 at reset
     I2S1.clkm_conf.clkm_div_a = 0;  // 0 at reset, what about divide by 0? (not an issue)
     // Bit clock configuration bit in transmitter mode.
@@ -362,12 +399,27 @@ void i2s_in_init(pinnum_t ws, pinnum_t bck, pinnum_t data, int num_chips)
     I2S1.sample_rate_conf.rx_bck_div_num = 2;
 
     // Enable RX interrupts (DMA Interrupts)
+    // All possible interrupts are listed here
+    // and all RX ones were were experimented with.
+    // The only one that is needed is in_suc_eof
 
-    I2S1.int_ena.in_done       = 0;
-    I2S1.int_ena.in_suc_eof    = 1;
-    I2S1.int_ena.in_err_eof    = 0;
-    I2S1.int_ena.in_dscr_err   = 0;
-    I2S1.int_ena.in_dscr_empty = 0;
+    // I2S1.int_ena.rx_take_data =  0;
+    // I2S1.int_ena.rx_wfull =      0;
+    // I2S1.int_ena.rx_rempty =     0;         // setting this one will crash the machine
+    // I2S1.int_ena.rx_hung =       0;
+    // I2S1.int_ena.in_done =       0;
+    I2S1.int_ena.in_suc_eof =    1;
+    // I2S1.int_ena.in_dscr_err =   0;
+    // I2S1.int_ena.in_err_eof =    0;
+    // I2S1.int_ena.in_dscr_empty = 0;
+    // I2S1.int_ena.tx_put_data =   0;
+    // I2S1.int_ena.tx_wfull =      0;
+    // I2S1.int_ena.tx_rempty =     0;
+    // I2S1.int_ena.tx_hung =       0;
+    // I2S1.int_ena.out_done =      0;
+    // I2S1.int_ena.out_eof =       0;
+    // I2S1.int_ena.out_dscr_err =  0;
+    // I2S1.int_ena.out_total_eof = 0;
 
     // Allocate and Enable the I2S interrupt
 
@@ -451,24 +503,38 @@ static void i2s_in_start()
 
 static void IRAM_ATTR i2s_in_intr_handler(void* arg)
 {
+    #ifdef MONITOR_I2S_IN
+        count_int++;
+        // if (I2S1.int_st.rx_take_data  ) count_rx_take_data  ++;
+        // if (I2S1.int_st.rx_wfull      ) count_rx_wfull      ++;
+        // if (I2S1.int_st.rx_rempty     ) count_rx_rempty     ++;
+        // if (I2S1.int_st.rx_hung       ) count_rx_hung       ++;
+        if (I2S1.int_st.in_done       ) count_in_done       ++;
+        if (I2S1.int_st.in_suc_eof    ) count_in_suc_eof    ++;
+        // if (I2S1.int_st.in_dscr_err   ) count_in_dscr_err   ++;
+        // if (I2S1.int_st.in_err_eof    ) count_in_err_eof    ++;
+        // if (I2S1.int_st.in_dscr_empty ) count_in_dscr_empty ++;
+    #endif
+
     if (I2S1.int_st.in_suc_eof)
     {
-        #ifdef MONITOR_I2S_IN
-            i2s_in_counter++;
-        #endif
-
         // Get the descriptor of the last item in the linked list, then
         // get the value from it's buffer, shift it as needed, and if
         // changed, hand it off to the I2SIBus for handling
 
-        lldesc_t* finish_desc = (lldesc_t*)I2S1.in_eof_des_addr;
+        lldesc_t* finish_desc = (lldesc_t*)I2S1.in_link_dscr;   // in_eof_des_addr;
         uint32_t *buf_ptr = (uint32_t*)finish_desc->buf;
         uint32_t value = *buf_ptr;    // 1 sample per buffer
         value >>= (4 - i2s_in_num_chips) *8;
 
         if (i2s_in_value != value)
         {
+            #ifdef MONITOR_I2S_IN
+                count_chgs++;
+            #endif
+
             i2s_in_value = value;
+            // log_debug(String(i2s_in_value,HEX));
             Machine::I2SIBus::handleValueChange(i2s_in_value);
         }
    }
@@ -490,8 +556,20 @@ static void IRAM_ATTR i2s_in_intr_handler(void* arg)
     {
         while (1)
         {
-            vTaskDelay(2000);        // every 2 seconds
-            log_debug("isr count=" << i2s_in_counter << " i2s_in_value=" << String(i2s_in_value,HEX));
+            vTaskDelay(1000);        // every second
+            log_debug(
+                "isr=" << count_int <<
+                " chg=" << count_chgs  <<
+                // " td=" << count_rx_take_data  <<
+                // " wf=" << count_rx_wfull      <<
+                // " re=" << count_rx_rempty     <<
+                // " rh=" << count_rx_hung       <<
+                " id=" << count_in_done       <<
+                " is=" << count_in_suc_eof    <<
+                // " ie=" << count_in_dscr_err   <<
+                // " ef=" << count_in_err_eof    <<
+                // " de=" << count_in_dscr_empty <<
+                " val=" << String(i2s_in_value,HEX) );
 
             static UBaseType_t uxHighWaterMark = 0;
     #ifdef DEBUG_TASK_STACK

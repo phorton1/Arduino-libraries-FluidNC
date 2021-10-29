@@ -11,7 +11,7 @@
 #include "I2SIn.h"
 
 
-// #define MONITOR_SHIFTIN
+#define MONITOR_SHIFTIN
 
 
 namespace Machine
@@ -22,6 +22,10 @@ namespace Machine
     int I2SIBus::s_highest_interrupt = 0;    // pinnum+1
     uint32_t I2SIBus::s_interrupt_mask = 0;
     Pins::I2SIPinDetail *I2SIBus::s_int_pins[s_max_pins];
+
+    #ifdef MONITOR_SHIFTIN
+        static uint32_t shiftin_time = 0;
+    #endif
 
 
     void I2SIBus::validate() const
@@ -113,7 +117,13 @@ namespace Machine
         // Only called from the !i2s task, shift in
         // 8 bits for each 74HC165 chip, ending with
         // the first one in the chain in the LSB nibble
+        // As measured by micros(), body of method takes 6-8 us
+        // spent mostly in the shiftIn() call which takes about 6us.
     {
+        #ifdef MONITOR_SHIFTIN
+            uint32_t start = micros();
+        #endif
+
         _ws.write(1);       // latch
         uint32_t value = 0;
         for (int i=0; i<_s_num_chips; i++)
@@ -122,6 +132,11 @@ namespace Machine
             value  = value << 8 | val;
         }
         _ws.write(0);       // unlatch
+
+        #ifdef MONITOR_SHIFTIN
+            shiftin_time = micros() - start;
+        #endif
+
         // log_debug("SerinBus shiftInValue=" << String(value,HEX));
         return value;
     }
@@ -160,23 +175,36 @@ namespace Machine
     {
         I2SIBus *self = config->_i2si;
         Assert(self);
+
+        #ifdef MONITOR_SHIFTIN
+            static uint32_t last_out = 0;
+            static uint32_t shift_counter = 0;
+            static uint32_t shiftin_chgs = 0;
+        #endif
+
         while (1)
         {
             vTaskDelay(10);      // 100 times a second
             uint32_t value = self->shiftInValue();
             if (s_value != value)
+            {
+                #ifdef MONITOR_SHIFTIN
+                    shiftin_chgs++;
+                #endif
                 handleValueChange(value);
+            }
 
             #ifdef MONITOR_SHIFTIN
-                static uint32_t last_out = 0;
-                static uint32_t shift_counter = 0;
-
                 shift_counter++;
                 uint32_t now = millis();
-                if (now > last_out + 2000)  // every 2 seconds
+                if (now > last_out + 1000)  // every 1 second
                 {
                     last_out = now;
-                    log_debug("shift counter=" << shift_counter << " value=" << String(s_value,HEX));
+                    log_debug(
+                        "shift count=" << shift_counter <<
+                        " chgs=" << shiftin_chgs <<
+                        " micros=" << shiftin_time <<
+                        " value=" << String(s_value,HEX));
                 }
             #endif
         }

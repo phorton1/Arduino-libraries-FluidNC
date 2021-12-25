@@ -89,4 +89,7 @@ public:
     }
 
     ~SDCard();
+
+    bool prhReOpenSDFile(String filename, size_t position);
+
 };

@@ -78,19 +78,92 @@ bool SDCard::closeFile() {
   Returns true if a line was read, even if it was empty.
   Returns false on EOF or error.  Errors display a message.
 */
+
+static bool SDCard::prhReOpenSDFile(String filename, size_t position)
+{
+    log_debug("re-openening " << filename.c_str() << ":" << position);
+
+    delay(1000);
+    SD.end();
+
+    delay(1000);
+    auto csPin = _cs.getNative(Pin::Capabilities::Output | Pin::Capabilities::Native);
+    if (!SD.begin(csPin, SPI, SPIfreq, "/sd", 2))
+    {
+        log_error("prhReOpenSDFile() could not restart the SD card");
+        return false;
+    }
+    if (SD.cardSize() <= 0)
+    {
+        log_error("prhReOpenSDFile() found an empty SD card");
+        return false;
+    }
+
+    delay(1000);
+    _pImpl->_file = SD.open(filename.c_str());
+    if (!_pImpl->_file)
+    {
+        log_error("prhReOpenSDFile() could not re-open " << filename.c_str());
+        return false;
+    }
+
+    delay(1000);
+    if (!_pImpl->_file->seek(position))
+    {
+        log_error("prhReOpenSDFile() could not seek to " << position);
+        return false;
+    }
+
+    log_debug("file successfully re-opened");
+    return true;
+}
+
+
+
 Error SDCard::readFileLine(char* line, int maxlen) {
     if (!_pImpl->_file) {
         return Error::FsFailedRead;
     }
 
+
+    int prh_retry_count = 0;
+    String prh_save_filename = _pImpl->_file.name();
+
     _current_line_number += 1;
     int len = 0;
-    while (_pImpl->_file.available()) {
+    while (_pImpl->_file.available())
+    {
+        size_t prh_save_position = _pImpl->_file.position();
+
         if (len >= maxlen) {
             return Error::LineLengthExceeded;
         }
+
+prh_retry:
+
         int c = _pImpl->_file.read();
-        if (c < 0) {
+        if (c < 0)
+        {
+            // prh - it is a big pain in the ass that the SD card fails in the middle of big runs
+            // I am not sure why it is happening, but it happens fairly regularly.
+            //
+            // What to do?
+            //
+            // Seems like it would be necessary to save off the filename and position,
+            // end and restart the SD card, re-open the file, set the seek position,
+            // and then try to read the character again.
+
+            log_error("FILE READ(" << prh_retry_count << ") FAILED AT " << prh_save_filename.c_str << ":" << prh_save_position);
+
+            if (prh_retry_count < 5)
+            {
+                prh_retry_count++;
+                if (prhReOpenSDFile(prh_save_filename,prh_save_position))
+                {
+                    goto prh_retry:
+                }
+            }
+
             return Error::FsFailedRead;
         }
         if (c == '\n') {

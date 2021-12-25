@@ -77,8 +77,11 @@ namespace Spindles {
 		//
 		// I am not sure but I think these lines are required for the laser
 		//
-		// set_enable(gc_state.modal.spindle != SpindleState::Disable);
-        // set_output(dev_speed);
+
+		// PRH - PRH - PRH - TURNING ON setSpeedFromISR for laser testing
+
+		set_enable(gc_state.modal.spindle != SpindleState::Disable);
+        set_output(dev_speed);
     }
 
     // XXX this is the same as OnOff::setState so it might be possible to combine them

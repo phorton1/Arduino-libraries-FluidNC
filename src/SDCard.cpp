@@ -79,7 +79,7 @@ bool SDCard::closeFile() {
   Returns false on EOF or error.  Errors display a message.
 */
 
-static bool SDCard::prhReOpenSDFile(String filename, size_t position)
+bool SDCard::prhReOpenSDFile(String filename, size_t position)
 {
     log_debug("re-openening " << filename.c_str() << ":" << position);
 
@@ -108,7 +108,7 @@ static bool SDCard::prhReOpenSDFile(String filename, size_t position)
     }
 
     delay(1000);
-    if (!_pImpl->_file->seek(position))
+    if (!_pImpl->_file.seek(position))
     {
         log_error("prhReOpenSDFile() could not seek to " << position);
         return false;
@@ -153,14 +153,14 @@ prh_retry:
             // end and restart the SD card, re-open the file, set the seek position,
             // and then try to read the character again.
 
-            log_error("FILE READ(" << prh_retry_count << ") FAILED AT " << prh_save_filename.c_str << ":" << prh_save_position);
+            log_error("FILE READ(" << prh_retry_count << ") FAILED AT " << prh_save_filename.c_str() << ":" << prh_save_position);
 
             if (prh_retry_count < 5)
             {
                 prh_retry_count++;
                 if (prhReOpenSDFile(prh_save_filename,prh_save_position))
                 {
-                    goto prh_retry:
+                    goto prh_retry;
                 }
             }
 

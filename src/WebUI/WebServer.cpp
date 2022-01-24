@@ -1394,16 +1394,26 @@ namespace WebUI {
                     if (filename[0] != '/') {
                         filename = "/" + upload.filename;
                     }
+
+                    log_info("upload SD " << filename);
+                        // PRH - added display
+
                     //check if SD Card is available
                     if (config->_sdCard->begin(SDState::BusyUploading) != SDState::Idle) {
                         _upload_status = UploadStatusType::FAILED;
-                        log_info("Upload cancelled");
-                        pushError(ESP_ERROR_UPLOAD_CANCELLED, "Upload cancelled");
+                        log_info("Upload cancelled - SDCard busy");
+                        pushError(ESP_ERROR_UPLOAD_CANCELLED, "Upload cancelled - SDCard busy");
 
                     } else {
                         //delete file on SD Card if already present
-                        if (SD.exists(filename)) {
+                        if (SD.exists(filename))
+                        {
+                            log_info("Removing old SD " << filename);
+                                // PRH - added display
                             SD.remove(filename);
+                            vTaskDelay(100);
+                                // PRH - this delay seems to have helped
+                                // or maybe it's just the debugging I added above
                         }
                         String sizeargname = upload.filename + "S";
                         if (_webserver->hasArg(sizeargname)) {
@@ -1411,19 +1421,20 @@ namespace WebUI {
                             uint64_t freespace = SD.totalBytes() - SD.usedBytes();
                             if (filesize > freespace) {
                                 _upload_status = UploadStatusType::FAILED;
-                                log_info("Upload error");
-                                pushError(ESP_ERROR_NOT_ENOUGH_SPACE, "Upload rejected, not enough space");
+                                log_info("Upload error - not enough space");
+                                pushError(ESP_ERROR_NOT_ENOUGH_SPACE, "Upload error - not enough space");
                             }
                         }
                         if (_upload_status != UploadStatusType::FAILED) {
                             //Create file for writing
+
                             sdUploadFile = SD.open(filename, FILE_WRITE);
                             //check if creation succeed
                             if (!sdUploadFile) {
                                 //if creation failed
                                 _upload_status = UploadStatusType::FAILED;
-                                log_info("Upload failed");
-                                pushError(ESP_ERROR_FILE_CREATION, "File creation failed");
+                                log_info("Upload error - File creation failed");
+                                pushError(ESP_ERROR_FILE_CREATION, "Upload error - File creation failed");
                             }
                             //if creation succeed set flag UploadStatusType::ONGOING
                             else {

@@ -79,14 +79,16 @@ bool SDCard::closeFile() {
   Returns false on EOF or error.  Errors display a message.
 */
 
+// WELL, THAT DIDN'T WORK 2022-01-22
 bool SDCard::prhReOpenSDFile(String filename, size_t position)
 {
-    log_debug("re-openening " << filename.c_str() << ":" << position);
+    log_info("re-openening " << filename.c_str() << ":" << position);
+    _pImpl->_file.close();
 
-    delay(1000);
+    vTaskDelay(1000/portTICK_PERIOD_MS);
     SD.end();
 
-    delay(1000);
+    vTaskDelay(1000/portTICK_PERIOD_MS);
     auto csPin = _cs.getNative(Pin::Capabilities::Output | Pin::Capabilities::Native);
     if (!SD.begin(csPin, SPI, SPIfreq, "/sd", 2))
     {
@@ -99,7 +101,7 @@ bool SDCard::prhReOpenSDFile(String filename, size_t position)
         return false;
     }
 
-    delay(1000);
+    vTaskDelay(1000/portTICK_PERIOD_MS);
     _pImpl->_file = SD.open(filename.c_str());
     if (!_pImpl->_file)
     {
@@ -107,14 +109,15 @@ bool SDCard::prhReOpenSDFile(String filename, size_t position)
         return false;
     }
 
-    delay(1000);
+    vTaskDelay(1000/portTICK_PERIOD_MS);
     if (!_pImpl->_file.seek(position))
     {
         log_error("prhReOpenSDFile() could not seek to " << position);
         return false;
     }
 
-    log_debug("file successfully re-opened");
+    log_info("file successfully re-opened");
+    vTaskDelay(1000/portTICK_PERIOD_MS);
     return true;
 }
 
@@ -150,7 +153,7 @@ prh_retry:
             // What to do?
             //
             // Seems like it would be necessary to save off the filename and position,
-            // end and restart the SD card, re-open the file, set the seek position,
+            // and restart the SD card, re-open the file, set the seek position,
             // and then try to read the character again.
 
             log_error("FILE READ(" << prh_retry_count << ") FAILED AT " << prh_save_filename.c_str() << ":" << prh_save_position);

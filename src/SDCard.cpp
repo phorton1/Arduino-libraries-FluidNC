@@ -51,6 +51,7 @@ bool SDCard::openFile(fs::FS& fs, const char* path, Print& client, WebUI::Authen
     if (!_pImpl->_file) {
         return false;
     }
+    log_info("---> STARTING SD JOB: " << path);
     _client              = client;
     _auth_level          = auth_level;
     _state               = SDState::BusyPrinting;

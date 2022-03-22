@@ -34,7 +34,8 @@ namespace fs {
 }
 
 // XXX This should be a configuration parameter of the SPI bus
-const int32_t SPIfreq = 4000000;
+const int32_t SPIfreq = 2000000;
+    // prh 2022-03-21 - change from 4000000 to 2000000
 
 class SDCard : public Configuration::Configurable {
 public:

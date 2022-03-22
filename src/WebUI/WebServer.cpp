@@ -1727,7 +1727,7 @@ RETRY_UPLOAD:
             {
                 sdUploadFile.close();
             }
-            #if 0
+            #if 1
                 if (SD.exists(filename))
                 {
                     SD.remove(filename);

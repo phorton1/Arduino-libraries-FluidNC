@@ -925,6 +925,7 @@ namespace WebUI {
                     if (fsUploadFile) {
                         fsUploadFile.close();
                     }
+
                     String sizeargname = upload.filename + "S";
                     if (_webserver->hasArg(sizeargname)) {
                         uint32_t filesize  = _webserver->arg(sizeargname).toInt();
@@ -1372,130 +1373,345 @@ namespace WebUI {
         config->_sdCard->end();
     }
 
+
     //SD File upload with direct access to SD///////////////////////////////
-    void Web_Server::SDFile_direct_upload() {
+
+
+    // #include <avr/interrupt.h>
+
+    // prh - added Adler-32 checksum
+
+    uint32_t _adler_a;
+    uint32_t _adler_b;
+    uint32_t _the_checksum;
+    uint32_t _the_filesize;
+
+
+    #define MOD_ADLER 65521
+
+    void Web_Server::SDFile_direct_upload()
+    {
         static String filename;
         static File   sdUploadFile;
-        //this is only for admin and user
-        if (is_authenticated() == AuthenticationLevel::LEVEL_GUEST) {
-            _upload_status = UploadStatusType::FAILED;
-            _webserver->send(401, "application/json", "{\"status\":\"Authentication failed!\"}");
-            pushError(ESP_ERROR_AUTHENTICATION, "Upload rejected", 401);
-        } else {
-            //retrieve current file id
+
+        #if 1
+            static UBaseType_t uxHighWaterMark = 0;
+            UBaseType_t newHighWater = uxTaskGetStackHighWaterMark(NULL);
+            if (newHighWater != uxHighWaterMark)
+            {
+                uxHighWaterMark = newHighWater;
+                log_debug(pcTaskGetTaskName(NULL) << " Webserver Min Stack Space:" << uxHighWaterMark);
+            }
+        #endif
+
+        // if (is_authenticated() == AuthenticationLevel::LEVEL_GUEST)
+        // {
+        //     _upload_status = UploadStatusType::FAILED;
+        //     _webserver->send(401, "application/json", "{\"status\":\"Authentication failed!\"}");
+        //     pushError(ESP_ERROR_AUTHENTICATION, "Upload rejected", 401);
+        // }
+        // else
+        {
+            //Upload start
+            //**************
+
             HTTPUpload& upload = _webserver->upload();
-            if ((_upload_status != UploadStatusType::FAILED) || (upload.status == UPLOAD_FILE_START)) {
-                //Upload start
-                //**************
-                if (upload.status == UPLOAD_FILE_START) {
-                    _upload_status = UploadStatusType::ONGOING;
-                    filename       = upload.filename;
-                    //on SD need to add / if not present
-                    if (filename[0] != '/') {
+            if ((_upload_status != UploadStatusType::FAILED) || (upload.status == UPLOAD_FILE_START))
+            {
+                if (upload.status == UPLOAD_FILE_START)
+                {
+                    filename = upload.filename;
+                    if (filename[0] != '/')
                         filename = "/" + upload.filename;
-                    }
+                    _upload_status = UploadStatusType::ONGOING;
 
                     log_info("upload SD " << filename);
-                        // PRH - added display
+                    _adler_a = 1;
+                    _adler_b = 0;
 
                     //check if SD Card is available
-                    if (config->_sdCard->begin(SDState::BusyUploading) != SDState::Idle) {
+                    if (config->_sdCard->begin(SDState::BusyUploading) != SDState::Idle)
+                    {
                         _upload_status = UploadStatusType::FAILED;
                         log_info("Upload cancelled - SDCard busy");
                         pushError(ESP_ERROR_UPLOAD_CANCELLED, "Upload cancelled - SDCard busy");
 
-                    } else {
-                        //delete file on SD Card if already present
-                        if (SD.exists(filename))
-                        {
-                            log_info("Removing old SD " << filename);
-                                // PRH - added display
-                            SD.remove(filename);
-                            vTaskDelay(100);
-                                // PRH - this delay seems to have helped
-                                // or maybe it's just the debugging I added above
-                        }
+                    }
+                    else
+                    {
+                        String csargname = upload.filename + "C";
                         String sizeargname = upload.filename + "S";
-                        if (_webserver->hasArg(sizeargname)) {
-                            uint32_t filesize  = _webserver->arg(sizeargname).toInt();
-                            uint64_t freespace = SD.totalBytes() - SD.usedBytes();
-                            if (filesize > freespace) {
+
+                        if (!_webserver->hasArg(csargname) ||
+                            !_webserver->hasArg(sizeargname))
+                        {
+                            _upload_status = UploadStatusType::FAILED;
+                            log_info("Upload error - Missing Size or Checksum params");
+                            pushError(ESP_ERROR_FILE_CREATION, "Upload error - Missing Size or Checksum params");
+                        }
+                        else
+                        {
+                            _the_checksum = _webserver->arg(csargname).toInt();
+                            _the_filesize = _webserver->arg(sizeargname).toInt();
+                            log_info("upload filesize=" << _the_filesize << " checksum=" << _the_checksum);
+
+                            //delete file on SD Card if already present
+
+                            if (SD.exists(filename))
+                            {
+                                log_info("prh Removing old SD " << filename);
+                                SD.remove(filename);
+                            }
+
+                            uint64_t total_bytes = SD.totalBytes();
+                            uint64_t used_bytes = SD.usedBytes();
+                            uint64_t freespace = total_bytes - used_bytes;
+                            if (_the_filesize > freespace)
+                            {
+                                // debugging random-ish problems with SD
+
+                                #define MEG (1024*1024)
+
+                                uint64_t total_megs64 = (total_bytes + MEG - 1)/MEG;
+                                uint64_t used_megs64 = (used_bytes + MEG - 1)/MEG;
+                                uint64_t free_megs64 = (freespace + MEG - 1)/MEG;
+                                uint32_t total_megs = total_megs64;
+                                uint32_t used_megs = used_megs64;
+                                uint32_t free_megs = free_megs64;
+
                                 _upload_status = UploadStatusType::FAILED;
                                 log_info("Upload error - not enough space");
+                                log_info("    Total " << total_megs << " Used " << used_megs << " Free " << free_megs << " filesize " << _the_filesize);
                                 pushError(ESP_ERROR_NOT_ENOUGH_SPACE, "Upload error - not enough space");
                             }
                         }
-                        if (_upload_status != UploadStatusType::FAILED) {
-                            //Create file for writing
 
+                        // Create file for writing
+
+                        if (_upload_status != UploadStatusType::FAILED)
+                        {
                             sdUploadFile = SD.open(filename, FILE_WRITE);
-                            //check if creation succeed
-                            if (!sdUploadFile) {
-                                //if creation failed
+                            if (!sdUploadFile)
+                            {
                                 _upload_status = UploadStatusType::FAILED;
                                 log_info("Upload error - File creation failed");
                                 pushError(ESP_ERROR_FILE_CREATION, "Upload error - File creation failed");
                             }
-                            //if creation succeed set flag UploadStatusType::ONGOING
-                            else {
+                            else
+                            {
                                 _upload_status = UploadStatusType::ONGOING;
                             }
                         }
                     }
-                    //Upload write
-                    //**************
-                } else if (upload.status == UPLOAD_FILE_WRITE) {
-                    auto sdCard = config->_sdCard;
-                    vTaskDelay(1 / portTICK_RATE_MS);
-                    if (sdUploadFile && (_upload_status == UploadStatusType::ONGOING) &&
-                        (sdCard->get_state() == SDState::BusyUploading)) {
-                        //no error write post data
-                        if (upload.currentSize != sdUploadFile.write(upload.buf, upload.currentSize)) {
+                }
+
+                // Upload write
+                //**************
+
+                else if (upload.status == UPLOAD_FILE_WRITE)
+                {
+                    // vTaskDelay(20 / portTICK_RATE_MS);
+
+                    // auto sdCard = config->_sdCard;
+                    // if (sdUploadFile && (_upload_status == UploadStatusType::ONGOING) &&
+                    //     (sdCard->get_state() == SDState::BusyUploading))
+                    {
+                        // log_debug("upload(" << upload.currentSize << " at " << position);
+
+                        // calculate checksum
+
+                        const uint8_t *bp = (const uint8_t *) upload.buf;
+                        for (int j=0; j<upload.currentSize; j++)
+                        {
+                            _adler_a = (_adler_a + bp[j]) % MOD_ADLER;
+                            _adler_b = (_adler_b + _adler_a) % MOD_ADLER;
+                        }
+
+                        int u_try = 0;
+                        #define UPLOAD_RETRIES  5
+                        uint32_t position = sdUploadFile.position();
+                        vTaskDelay(10 / portTICK_PERIOD_MS);
+
+RETRY_UPLOAD:
+
+                        size_t written = sdUploadFile.write(upload.buf, upload.currentSize);
+                        if (written != upload.currentSize)
+                        {
+                            log_info("Upload write at " << position << " failed expected " << upload.currentSize << " got " << written);
+                            if (u_try < UPLOAD_RETRIES)
+                            {
+                                u_try++;
+                                log_info("--- >retry upload(" << u_try << ")");
+                                sdUploadFile.close();
+                                vTaskDelay(200 / portTICK_PERIOD_MS);
+                                sdUploadFile = SD.open(filename, FILE_WRITE);
+                                if (!sdUploadFile)
+                                {
+                                    log_info("Could not re-open file for writing");
+                                }
+                                else
+                                {
+                                    vTaskDelay(200 / portTICK_PERIOD_MS);
+                                    if (!sdUploadFile.seek(position))
+                                    {
+                                        log_info("seek failed, aborting retry");
+                                    }
+                                    else
+                                    {
+                                        vTaskDelay(100 / portTICK_PERIOD_MS);
+                                        goto RETRY_UPLOAD;
+                                    }
+                                }
+                            }
+
                             _upload_status = UploadStatusType::FAILED;
-                            log_info("Upload failed");
                             pushError(ESP_ERROR_FILE_WRITE, "File write failed");
                         }
-                    } else {  //if error set flag UploadStatusType::FAILED
-                        _upload_status = UploadStatusType::FAILED;
-                        log_info("Upload failed");
-                        pushError(ESP_ERROR_FILE_WRITE, "File write failed");
-                    }
-                    //Upload end
-                    //**************
-                } else if (upload.status == UPLOAD_FILE_END) {
-                    //if file is open close it
-                    if (sdUploadFile) {
-                        sdUploadFile.close();
-                        //TODO Check size
-                        String sizeargname = upload.filename + "S";
-                        if (_webserver->hasArg(sizeargname)) {
-                            uint32_t filesize = 0;
-                            sdUploadFile      = SD.open(filename, FILE_READ);
-                            filesize          = sdUploadFile.size();
-                            sdUploadFile.close();
-                            if (_webserver->arg(sizeargname) != String(filesize)) {
-                                _upload_status = UploadStatusType::FAILED;
-                                pushError(ESP_ERROR_UPLOAD, "File upload mismatch");
-                                log_info("Upload failed");
-                            }
+                        else
+                        {
+                            upload.currentSize = written;
                         }
-                    } else {
-                        _upload_status = UploadStatusType::FAILED;
-                        log_info("Upload failed");
-                        pushError(ESP_ERROR_FILE_CLOSE, "File close failed");
                     }
-                    if (_upload_status == UploadStatusType::ONGOING) {
+                    // else
+                    // {
+                    //     //if error set flag UploadStatusType::FAILED
+                    //     _upload_status = UploadStatusType::FAILED;
+                    //     log_info("Upload failed");
+                    //     pushError(ESP_ERROR_FILE_WRITE, "File write failed");
+                    // }
+                }
+
+                //Upload end
+                //**************
+
+                else if (upload.status == UPLOAD_FILE_END)
+                {
+                    //if file is open close it
+
+                    if (sdUploadFile)
+                    {
+                        sdUploadFile.close();
+                        sdUploadFile = SD.open(filename, FILE_READ);
+                        if (sdUploadFile)
+                        {
+                            uint32_t filesize = sdUploadFile.size();
+                            if (_the_filesize != filesize)
+                            {
+                                _upload_status = UploadStatusType::FAILED;
+                                pushError(ESP_ERROR_UPLOAD, "File size mismatch");
+                                log_info("Upload failed - File size mismatch expected " << _the_filesize << " got " << filesize);
+                            }
+
+                            // verify checksum
+
+                            else
+                            {
+                                uint32_t checksum = (_adler_b << 16) | _adler_a;
+                                if (_the_checksum != checksum)
+                                {
+                                    _upload_status = UploadStatusType::FAILED;
+                                    pushError(ESP_ERROR_UPLOAD, "Checksum mismatch");
+                                    log_info("Upload failed - Checksum mismatch expected " << _the_checksum << " got " << checksum);
+                                }
+                                else
+                                {
+                                    log_info("Upload " << filename << " OK - checksum and filesize verified");
+
+                                    #if 1
+
+                                        log_info("Doing readback check of " << _the_filesize << " bytes");
+                                        // readback checksum
+                                        _adler_a = 1;
+                                        _adler_b = 0;
+                                        checksum = 0;
+
+                                        #define CS_BUFSIZE 1024
+                                        bool cs_ok = 1;
+                                        static uint8_t cs_buf[CS_BUFSIZE+4];
+
+                                        size_t offset = 0;
+                                        size_t remain = _the_filesize;
+                                        while (remain)
+                                        {
+                                            size_t to_read = CS_BUFSIZE;
+                                            if (to_read > remain)
+                                                to_read = remain;
+                                            size_t got = sdUploadFile.read(cs_buf, to_read);
+                                            if (to_read != got)
+                                            {
+                                                _upload_status = UploadStatusType::FAILED;
+                                                pushError(ESP_ERROR_UPLOAD, "Upload failed - Checksum re-read failed");
+                                                log_info("Re-read failed at offset=" << offset << " expected " << to_read << " got " << got);
+                                                cs_ok = 0;
+                                                remain = 0;
+                                            }
+                                            else
+                                            {
+                                                offset += to_read;
+                                                remain -= to_read;
+                                                for (int j=0; j<to_read; j++)
+                                                {
+                                                    _adler_a = (_adler_a + cs_buf[j]) % MOD_ADLER;
+                                                    _adler_b = (_adler_b + _adler_a) % MOD_ADLER;
+                                                }
+                                            }
+                                        }
+                                        if (cs_ok)
+                                        {
+                                            checksum = (_adler_b << 16) | _adler_a;
+                                            if (_the_checksum != checksum)
+                                            {
+                                                _upload_status = UploadStatusType::FAILED;
+                                                pushError(ESP_ERROR_UPLOAD, "Re-read checksum mismatch");
+                                                log_info("Upload failed - Re-read mismatch expected " << _the_checksum << " got " << checksum);
+                                            }
+                                            else
+                                            {
+                                                log_info("Upload " << filename << " READBACK OK - checksum verified");
+                                            }
+                                        }   // cs_ok
+                                    #endif  // readback check
+                                }   // initial checksum ok
+                            }   // filesize ok
+
+                            sdUploadFile.close();
+                        }
+                        else
+                        {
+                            _upload_status = UploadStatusType::FAILED;
+                            pushError(ESP_ERROR_UPLOAD, "Could not re-open file for size check");
+                            log_info("Upload failed - Could not re-open file for size check");
+                        }
+                    }
+                    else
+                    {
+                        _upload_status = UploadStatusType::FAILED;
+                        log_info("Upload failed - file was not open at UPLOAD_FILE_END");
+                        pushError(ESP_ERROR_FILE_CLOSE, "file was not open at UPLOAD_FILE_END");
+                    }
+
+                    // prh - not sure of this little chunk of logic
+
+                    if (_upload_status == UploadStatusType::ONGOING)
+                    {
                         _upload_status = UploadStatusType::SUCCESSFUL;
                         config->_sdCard->end();
-                    } else {
+                    }
+                    else
+                    {
                         _upload_status = UploadStatusType::FAILED;
                         pushError(ESP_ERROR_UPLOAD, "Upload error");
                     }
+                }
 
-                } else {  //Upload cancelled
+                // prh - or this one where it says "Upload cancelled"
+
+                else
+                {
                     _upload_status = UploadStatusType::FAILED;
-                    log_info("Upload failed");
-                    if (sdUploadFile) {
+                    log_info("Upload cancelled");
+                    if (sdUploadFile)
+                    {
                         sdUploadFile.close();
                     }
                     config->_sdCard->end();
@@ -1503,18 +1719,29 @@ namespace WebUI {
                 }
             }
         }
-        if (_upload_status == UploadStatusType::FAILED) {
+
+        if (_upload_status == UploadStatusType::FAILED)
+        {
             cancelUpload();
-            if (sdUploadFile) {
+            if (sdUploadFile)
+            {
                 sdUploadFile.close();
             }
-            if (SD.exists(filename)) {
-                SD.remove(filename);
-            }
+            #if 0
+                if (SD.exists(filename))
+                {
+                    SD.remove(filename);
+                }
+            #endif
             config->_sdCard->end();
         }
+
         COMMANDS::wait(0);
-    }
+
+    }   // Web_Server::SDFile_direct_upload()
+
+
+
 
     void Web_Server::handle() {
         static uint32_t start_time = millis();

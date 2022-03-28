@@ -10,6 +10,9 @@
 
 #include "Pin.h"
 
+#define I2S_OUT_NUM_BITS  16
+    // prh - not working, plus I only have one 74hc595
+
 /* Assert */
 #if defined(I2S_OUT_NUM_BITS)
 #    if (I2S_OUT_NUM_BITS != 16) && (I2S_OUT_NUM_BITS != 32)

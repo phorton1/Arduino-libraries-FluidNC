@@ -424,6 +424,7 @@ static void IRAM_ATTR i2s_out_intr_handler(void* arg) {
 // I2S bitstream generator task
 //
 static void i2sOutTask(void* parameter) {
+    log_debug("i2sOutTask started on core " << xPortGetCoreID());
     lldesc_t* dma_desc;
     while (1) {
         // Wait a DMA complete event from I2S isr

@@ -77,6 +77,7 @@ void limits_soft_check(float* target) {
 
 #ifdef LATER  // We need to rethink debouncing
 void limitCheckTask(void* pvParameters) {
+    log_debug("GLimits limitCheckTask started on core " << xPortGetCoreID());
     while (true) {
         std::atomic_thread_fence(std::memory_order::memory_order_seq_cst);  // read fence for settings
 

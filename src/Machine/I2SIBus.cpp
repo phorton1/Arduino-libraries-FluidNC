@@ -173,9 +173,9 @@ namespace Machine
     // static
     void I2SIBus::shiftInTask(void *params)
     {
+        log_debug("I2SI shiftInTask started on core " << xPortGetCoreID());
         I2SIBus *self = config->_i2si;
         Assert(self);
-
         #ifdef MONITOR_SHIFTIN
             static uint32_t last_out = 0;
             static uint32_t shift_counter = 0;

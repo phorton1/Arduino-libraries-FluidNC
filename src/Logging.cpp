@@ -4,6 +4,10 @@
 #include "Logging.h"
 #include "SettingsDefinitions.h"
 
+
+volatile bool prh_in_out = false;
+
+
 #ifndef ESP32
 
 #    include <iostream>
@@ -20,6 +24,8 @@ bool atMsgLevel(MsgLevel level) {
 #endif
 
 DebugStream::DebugStream(const char* name) {
+    while (prh_in_out) vTaskDelay(1);
+    prh_in_out = true;
     DEBUG_OUT << "[MSG:" << name << ": ";
 }
 
@@ -30,4 +36,5 @@ size_t DebugStream::write(uint8_t c) {
 
 DebugStream::~DebugStream() {
     DEBUG_OUT << "]\n";
+    prh_in_out = false;
 }

@@ -72,6 +72,8 @@ static i2s_in_dma_t i_dma;
 static intr_handle_t i2s_in_isr_handle;
 static int i2s_in_initialized = 0;
 static uint32_t i2s_in_value = 0;
+static bool i2s_in_started = false;
+
 
 static portMUX_TYPE i2s_in_spinlock = portMUX_INITIALIZER_UNLOCKED;
 
@@ -527,7 +529,14 @@ static void IRAM_ATTR i2s_in_intr_handler(void* arg)
         uint32_t value = *buf_ptr;    // 1 sample per buffer
         value >>= (4 - i2s_in_num_chips) *8;
 
-        if (i2s_in_value != value)
+        // prh - 2022-04-14 - issue an intital set of interrupts for all pins,
+         // with the semantic that the value is "changing" from "unknown" to the
+         // given state.  See note in Machine::LimitPin.cpp::handleISR() as to
+         // why this is important to giving an alarm on a machine starting with
+         // a limit pin triggered.  This logic also applied and tested in the
+         // I2SIBus shiftIn task handler.
+
+        if (!i2s_in_started || i2s_in_value != value)
         {
             #ifdef MONITOR_I2S_IN
                 count_chgs++;
@@ -535,7 +544,8 @@ static void IRAM_ATTR i2s_in_intr_handler(void* arg)
 
             i2s_in_value = value;
             // log_debug(String(i2s_in_value,HEX));
-            Machine::I2SIBus::handleValueChange(i2s_in_value);
+            Machine::I2SIBus::handleValueChange(i2s_in_value,i2s_in_started);
+            i2s_in_started = true;
         }
    }
 

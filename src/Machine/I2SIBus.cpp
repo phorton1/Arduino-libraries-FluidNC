@@ -18,6 +18,7 @@ namespace Machine
 {
     uint32_t I2SIBus::s_pins_used = 0;
     int I2SIBus::_s_num_chips= 1;
+    bool I2SIBus::s_started = false;
     uint32_t I2SIBus::s_value = 0;
     int I2SIBus::s_highest_interrupt = 0;    // pinnum+1
     uint32_t I2SIBus::s_interrupt_mask = 0;
@@ -144,15 +145,17 @@ namespace Machine
 
 
     // static
-    void IRAM_ATTR I2SIBus::handleValueChange(uint32_t value)
+    void IRAM_ATTR I2SIBus::handleValueChange(uint32_t value, bool started)
         // This method is called as a real interrupt handler, directly from
         // the I2S isr if !_use_shift_in.  So serial debugging is generally not allowed.
         // The debugging can only be turned on manually when _use_shift_in ..
     {
-        // log_debug("handleValueChange(" << String(value,HEX) << ") s_value=" << String(s_value,HEX));
+        // log_debug("handleValueChange(" << String(value,HEX) << ") s_value=" << String(s_value,HEX) << " started=" << started);
         // log_debug("int_mask=" << String(s_interrupt_mask,HEX) << " highest=" << s_highest_interrupt);
 
-        uint32_t prev = s_value;
+        uint32_t prev = started ? s_value : ~value;
+            // if not started, set prev to the opposite of the value to
+            // send out all interrupts
         s_value = value;
         if (s_interrupt_mask)
         {
@@ -186,12 +189,21 @@ namespace Machine
         {
             vTaskDelay(10);      // 100 times a second
             uint32_t value = self->shiftInValue();
-            if (s_value != value)
+
+            // prh - 2022-04-14 - issue an intital set of interrupts for all pins,
+            // with the semantic that the value is "changing" from "unknown" to the
+            // given state.  See note in Machine::LimitPin.cpp::handleISR() as to
+            // why this is important to giving an alarm on a machine starting with
+            // a limit pin triggered.  This logic also applied (though not tested)
+            // on the actual I2SIn peripheral handler.
+
+            if (!s_started || s_value != value)
             {
                 #ifdef MONITOR_SHIFTIN
                     shiftin_chgs++;
                 #endif
-                handleValueChange(value);
+                handleValueChange(value,s_started);
+                s_started = true;
             }
 
             #ifdef MONITOR_SHIFTIN

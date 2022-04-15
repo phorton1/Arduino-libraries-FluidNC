@@ -62,7 +62,34 @@ namespace Machine {
                 clear_bits(*_negLimits, _bitmask);
             }
         }
-        if (sys.state != State::Alarm && sys.state != State::ConfigAlarm && sys.state != State::Homing) {
+
+        // prh - 2022-04-14 the limit pin registers for a change interrupt.
+        // the yaml allows one to define whether it is active high or low,
+        // and above, we even read the state of the pin and set or clear the limit
+        // bits (correctly) based on the state., yet the previous code below triggered an alarm
+        // an alarm on any change.  It should only trigger an alarm on a transition
+        // to the "active" state.
+        //
+        // This is further compounded by the I2SI implementation which starts with a zero,
+        // and sends an initial set of interrupts to the "inactive" (high) state as a result,
+        // Thus a machine that was active:low, but actually starting with a limit switch triggered
+        // would not generate an interrupt, when it seems as if it should (for safeties sake).
+        //
+        // Only one solution comes to mind there.  It seems the most consistent will be to always
+        // send an initial set of "change" interrupts (from an "unknown" state to the starting
+        // state) and then this (modified) code would work properly to put the machine in an
+        // alarm state on startup if a limit switch was triggered).
+        //
+        // Otherwise (it makes no sense) for the I2S bus to "know" the active mode of a pin
+        // and would be obtuse to *only* generate an initial interrupt if it *happened* to
+        // be in the active state.
+        //
+        // Therefore I am changing the code below to only trigger the alarm "if _value".
+        // and making the aforementioned change in I2SBus (to send out an initial change interrupt
+        // for all pins).
+
+        if (_value &&
+            sys.state != State::Alarm && sys.state != State::ConfigAlarm && sys.state != State::Homing) {
             if (_pHardLimits && rtAlarm == ExecAlarm::None) {
 #if 0
 
@@ -74,7 +101,7 @@ namespace Machine {
                 }
 #endif
 
-                // log_debug("Hard limits");  // This might not work from ISR context
+                // log_debug("HARD LIMIT _value=" << _value << "  bitmask=" << _bitmask);  // This might not work from ISR context
                 mc_reset();                      // Initiate system kill.
                 rtAlarm = ExecAlarm::HardLimit;  // Indicate hard limit critical event
             }

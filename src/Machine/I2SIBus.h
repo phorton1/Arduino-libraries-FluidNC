@@ -66,7 +66,7 @@ namespace Machine {
 
         ~I2SIBus() = default;
 
-        static void IRAM_ATTR handleValueChange(uint32_t value);
+        static void IRAM_ATTR handleValueChange(uint32_t value, bool started);
             // called directly from I2S interrupt handler and/or
             // from our shiftIn polling loop, sets the new value
             // and possibly dispatches interrupts.
@@ -92,6 +92,7 @@ namespace Machine {
 
         // implementation
 
+        static bool s_started;
         static uint32_t s_value;
         static uint32_t s_pins_used;
         static int s_highest_interrupt;    // pinnum+1

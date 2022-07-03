@@ -47,18 +47,30 @@ namespace Machine {
     void IRAM_ATTR LimitPin::handleISR() {
         bool pinState = _pin.read();
         _value        = _pin.read();
-        if (_value) {
-            if (_posLimits != nullptr) {
+        // log_debug("LimitPin::handleISR(" << String(_bitmask,HEX) << ") value=" << _value);
+        if (_value)
+        {
+            if (_posLimits != nullptr)
+            {
+                // log_debug("    set_bits(posLimits," << String(_bitmask,HEX) << ")");
                 set_bits(*_posLimits, _bitmask);
             }
-            if (_negLimits != nullptr) {
+            if (_negLimits != nullptr)
+            {
+                // log_debug("    set_bits(negLimits," << String(_bitmask,HEX) << ")");
                 set_bits(*_negLimits, _bitmask);
             }
-        } else {
-            if (_posLimits != nullptr) {
+        }
+        else
+        {
+            if (_posLimits != nullptr)
+            {
+                // log_debug("    clear_bits(posLimits," << String(_bitmask,HEX) << ")");
                 clear_bits(*_posLimits, _bitmask);
             }
-            if (_negLimits != nullptr) {
+            if (_negLimits != nullptr)
+            {
+                // log_debug("    clear_bits(negLimits," << String(_bitmask,HEX) << ")");
                 clear_bits(*_negLimits, _bitmask);
             }
         }
@@ -66,7 +78,7 @@ namespace Machine {
         // prh - 2022-04-14 the limit pin registers for a change interrupt.
         // the yaml allows one to define whether it is active high or low,
         // and above, we even read the state of the pin and set or clear the limit
-        // bits (correctly) based on the state., yet the previous code below triggered an alarm
+        // bits (correctly) based on the state., yet the previous code below triggered
         // an alarm on any change.  It should only trigger an alarm on a transition
         // to the "active" state.
         //
@@ -101,7 +113,7 @@ namespace Machine {
                 }
 #endif
 
-                // log_debug("HARD LIMIT _value=" << _value << "  bitmask=" << _bitmask);  // This might not work from ISR context
+                log_debug("HARD LIMIT _value=" << _value << "  bitmask=" << String(_bitmask,HEX));  // This might not work from ISR context
                 mc_reset();                      // Initiate system kill.
                 rtAlarm = ExecAlarm::HardLimit;  // Indicate hard limit critical event
             }

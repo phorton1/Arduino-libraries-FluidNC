@@ -276,12 +276,14 @@ namespace Machine {
     }
 
     void Homing::run_one_cycle(AxisMask axisMask) {
+
+        // log_info("Homing::run_one_cycle(" << String(axisMask,HEX) << ")  homingMask=" << String(Machine::Axes::homingMask,HEX));
         axisMask &= Machine::Axes::homingMask;
         MotorMask motors = config->_axes->set_homing_mode(axisMask, true);
 
         try {
             if (squaredOneSwitch(motors)) {
-                //log_info("POG Squaring");
+                // log_info("POG Squaring");
                 run(motors, true, true);             // Approach slowly
                 run(motors, false, false);           // Pulloff
                 run(motors & MOTOR0, true, false);   // Approach slowly
@@ -289,7 +291,7 @@ namespace Machine {
                 run(motors & MOTOR1, true, false);   // Approach slowly
                 run(motors & MOTOR1, false, false);  // Pulloff
             } else if (squaredStressfree(motors)) {
-                //log_info("Stress Free Squaring 0x" << String(motors, 16));
+                // log_info("Stress Free Squaring 0x" << String(motors, 16));
                 run(motors, true, true);    // Approach fast
                 run(motors, false, false);  // Pulloff
                 run(motors, true, false);   // Approach fast
@@ -311,7 +313,7 @@ namespace Machine {
                     }
                 }
             } else {
-                //log_info("Single Axis Homing");
+                // log_info("Single Axis Homing");
                 for (int i = 0; i < NHomingLocateCycle; i++) {
                     run(motors, true, true);    // Approach fast
                     run(motors, false, false);  // Pulloff

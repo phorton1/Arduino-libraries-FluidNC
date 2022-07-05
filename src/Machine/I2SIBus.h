@@ -6,7 +6,7 @@
 #pragma once
 
 #include "../Configuration/Configurable.h"
-#include "Pins/I2SIPinDetail.h"
+#include "../Pins/I2SIPinDetail.h"
 
 
 namespace Machine {

@@ -22,11 +22,25 @@
 #include "WebUI/Authentication.h"
 #include "Pin.h"
 #include "Error.h"
-
 #include "FluidTypes.h"
-
-
 #include <cstdint>
+
+
+// GLOBAL SPI SEMAPHORE
+// There is a global semaphore for the SPI bus, so that only one core/task
+// accesses it at a time.  The only use internal to FluidNC is the SD Card.
+// Proven to work at a high level, with calls ONLY in Serial.cpp
+// and Webserver.
+
+extern bool getSPISemaphore(TickType_t wait = (TickType_t) 10);
+    // Wait can be 0 to poll the semaphore, portMAX_DELAY to
+    // block until available, or the number of 10ms 'ticks' to wait,
+    // default == 100ms
+
+extern void releaseSPISemaphore();
+    // Must be called if getSPISemaphore() returns true
+
+
 
 // Forward declaration:
 namespace fs {

@@ -230,6 +230,8 @@ void client_init() {
     register_client(&WebUI::inputBuffer);  // Macros
 }
 
+
+
 InputClient* pollClients(bool realtime_only /*=false*/) {
 
     auto sdcard = config->_sdCard;
@@ -310,10 +312,24 @@ InputClient* pollClients(bool realtime_only /*=false*/) {
     WebUI::wifi_services.handle();  // OTA, web_server, telnet_server polling
 #endif
 
+
+
     // _readyNext indicates that input is coming from a file and
     // the GCode system is ready for another line.
     if (sdcard && sdcard->_readyNext) {
+
+        // The call to sdcard->readFileLine() is protected by a semaphore here.
+        // This code is called only from protocol_main_loop() and does not happen
+        // on an interrupt.  Returning NULL causes the loop() to spin around again.
+
+        if (!getSPISemaphore())
+            return NULL;
+
         Error res = sdcard->readFileLine(sdClient->_line, InputClient::maxLine);
+
+        // RELEASE THE SEMAPHORE
+        releaseSPISemaphore();
+
         if (res == Error::Ok) {
             sdClient->_out     = &sdcard->getClient();
             sdcard->_readyNext = false;
@@ -324,6 +340,8 @@ InputClient* pollClients(bool realtime_only /*=false*/) {
         // gcode in the planner, but the steppers get turned off in Protocol::main_loop()
         // before all lines in the planner have been executed.  This forces the planner
         // to finish if it's just EOF, but lets it turn off the steppers for real errors.
+        // So I added this call to protocol_buffer_synchronize() which will cause those two
+        // lines to get executed before we return.
 
         if (res == Error::Eof)
             protocol_buffer_synchronize();

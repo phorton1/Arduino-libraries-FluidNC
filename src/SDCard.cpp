@@ -12,6 +12,27 @@
 #include <SD.h>
 #include <SPI.h>
 
+
+// GLOBAL SPI SEMAPHORE
+// Accessors are safe even if the SDCard is not used.
+
+SemaphoreHandle_t gSPISemaphore = NULL;
+
+bool getSPISemaphore(TickType_t wait)
+{
+    if (gSPISemaphore == NULL)
+        return true;
+    return ( xSemaphoreTake( gSPISemaphore, wait ) == pdTRUE );
+}
+void releaseSPISemaphore()
+{
+    if (gSPISemaphore != NULL)
+        xSemaphoreGive( gSPISemaphore);
+}
+
+
+
+
 class SDCard::FileWrap {
 public:
     FileWrap() : _file(nullptr) {}
@@ -122,6 +143,11 @@ bool SDCard::prhReOpenSDFile(String filename, size_t position)
     return true;
 }
 
+
+// prh - trying a semaphore between the UI and reading the SD Card
+
+SemaphoreHandle_t xSemaphore = NULL;
+StaticSemaphore_t xSemaphoreBuffer;
 
 
 Error SDCard::readFileLine(char* line, int maxlen) {
@@ -279,6 +305,7 @@ void SDCard::init() {
 
     _cs.setAttr(Pin::Attr::Output);
     _cardDetect.setAttr(Pin::Attr::Output);
+    vSemaphoreCreateBinary( gSPISemaphore );
 }
 
 void SDCard::afterParse() {

@@ -1190,6 +1190,14 @@ namespace WebUI {
         if ((_upload_status == UploadStatusType::FAILED) || (_upload_status == UploadStatusType::FAILED)) {
             sstatus = "Upload failed";
         }
+
+        // Initial 'proof' of SPI Semaphore.  The webserver simply waits here
+        // to get the SPI (sdcard) semaphore with a built in delay of 1 tick (10 ms).
+
+        volatile bool waiter = getSPISemaphore();
+        while (!waiter) { waiter = getSPISemaphore(); }
+
+
         _upload_status      = UploadStatusType::NONE;
         bool     list_files = true;
         uint64_t totalspace = 0;
@@ -1200,6 +1208,7 @@ namespace WebUI {
             status += (state == SDState::NotPresent) ? "No SD Card\"}" : "Busy\"}";
             _webserver->sendHeader("Cache-Control", "no-cache");
             _webserver->send(200, "application/json", status);
+            releaseSPISemaphore();
             return;
         }
 
@@ -1294,6 +1303,7 @@ namespace WebUI {
             s += " does not exist on SD Card\"}";
             _webserver->send(200, "application/json", s);
             config->_sdCard->end();
+            releaseSPISemaphore();
             return;
         }
         if (list_files) {
@@ -1371,6 +1381,7 @@ namespace WebUI {
         _webserver->sendHeader("Cache-Control", "no-cache");
         _webserver->send(200, "application/json", jsonfile);
         config->_sdCard->end();
+        releaseSPISemaphore();
     }
 
 
@@ -1403,6 +1414,12 @@ namespace WebUI {
                 log_debug(pcTaskGetTaskName(NULL) << " Webserver Min Stack Space:" << uxHighWaterMark);
             }
         #endif
+
+        // Initial 'proof' of SPI Semaphore. The webserver simply waits here
+        // to get the SPI (sdcard) semaphore with a built in delay of 1 tick (10 ms).
+
+        volatile bool waiter = getSPISemaphore();
+        while (!waiter) { waiter = getSPISemaphore(); }
 
         // if (is_authenticated() == AuthenticationLevel::LEVEL_GUEST)
         // {
@@ -1715,6 +1732,7 @@ RETRY_UPLOAD:
                         sdUploadFile.close();
                     }
                     config->_sdCard->end();
+                    releaseSPISemaphore();
                     return;
                 }
             }
@@ -1736,6 +1754,7 @@ RETRY_UPLOAD:
             config->_sdCard->end();
         }
 
+        releaseSPISemaphore();
         COMMANDS::wait(0);
 
     }   // Web_Server::SDFile_direct_upload()

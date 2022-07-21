@@ -47,6 +47,10 @@ void make_settings() {
 
     config_filename = new StringSetting("Name of Configuration File", EXTENDED, WG, NULL, "Config/Filename", "config.yaml", 1, 50, NULL);
 
+    build_info = new StringSetting("Build Information", EXTENDED, WG, NULL, "Build/Info", "prh1.0", 1, 50, NULL);
+        // prh - added when discovered lightburn sending $I was crashing
+
+
     // GRBL Numbered Settings
     status_mask = new IntSetting(NULL, GRBL, WG, "10", "Report/Status", 1, 0, 3, NULL);
 }

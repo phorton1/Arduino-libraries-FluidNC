@@ -318,12 +318,15 @@ InputClient* pollClients(bool realtime_only /*=false*/) {
     // the GCode system is ready for another line.
     if (sdcard && sdcard->_readyNext) {
 
+        volatile bool waiter = getSPISemaphore();
+        while (!waiter) { waiter = getSPISemaphore(); }
+
         // The call to sdcard->readFileLine() is protected by a semaphore here.
         // This code is called only from protocol_main_loop() and does not happen
         // on an interrupt.  Returning NULL causes the loop() to spin around again.
 
-        if (!getSPISemaphore())
-            return NULL;
+        // if (!getSPISemaphore())
+        //     return NULL;
 
         Error res = sdcard->readFileLine(sdClient->_line, InputClient::maxLine);
 

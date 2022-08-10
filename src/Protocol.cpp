@@ -7,6 +7,11 @@
   Protocol.cpp - execution state machine
 */
 
+
+#define DEBUG_IDLE_DISABLE  0
+#define MY_IDLE_FIX         1
+
+
 #include "Protocol.h"
 
 #include "Machine/MachineConfig.h"
@@ -203,6 +208,11 @@ void protocol_main_loop() {
 
         if (idleEndTime && (getCpuTicks() - idleEndTime) > 0) {
             idleEndTime = 0;  //
+
+            #if DEBUG_IDLE_DISABLE
+                log_debug("DISABLE IDLE");
+            #endif
+
             config->_axes->set_disable(true);
         }
     }
@@ -476,6 +486,13 @@ static void protocol_do_initiate_cycle() {
     // Start cycle only if queued motions exist in planner buffer and the motion is not canceled.
     sys.step_control = {};  // Restore step control to normal operation
     if (plan_get_current_block() && !sys.suspend.bit.motionCancel) {
+
+        // prh change 2
+        // set idleEndTime = 0 upon initiating any cycle
+        #if MY_IDLE_FIX
+            idleEndTime = 0;
+        #endif
+
         sys.suspend.value = 0;  // Break suspend state.
         sys.state         = State::Cycle;
         Stepper::prep_buffer();  // Initialize step segment buffer before beginning cycle.
@@ -541,6 +558,11 @@ void protocol_disable_steppers() {
     }
     if (sys.state == State::Sleep || rtAlarm != ExecAlarm::None) {
         // Disable steppers immediately in sleep or alarm state
+
+        #if DEBUG_IDLE_DISABLE
+            log_debug("DISABLE SLEEP");
+        #endif
+
         config->_axes->set_disable(true);
         return;
     }
@@ -551,18 +573,48 @@ void protocol_disable_steppers() {
     }
     // Otherwise, schedule stepper disable in a few milliseconds
     // unless a disable time has already been scheduled
-    if (idleEndTime == 0) {
+
+    // prh change 1
+    // invariantly push back the idle end time by ignoring == 0 clause
+
+    #if !MY_IDLE_FIX
+        if (idleEndTime == 0)
+    #endif
+    {
         idleEndTime = usToEndTicks(config->_stepping->_idleMsecs * 1000);
         // idleEndTime 0 means that a stepper disable is not scheduled. so if we happen to
         // land on 0 as an end time, just push it back by one microsecond to get off 0.
         if (idleEndTime == 0) {
             idleEndTime = 1;
+            #if DEBUG_IDLE_DISABLE
+                log_debug("IDLE_TIME=ONE");
+            #endif
         }
+        #if DEBUG_IDLE_DISABLE
+            else
+                log_debug("IDLE_TIME=" << idleEndTime);
+        #endif
     }
 }
 
+// the idleEndTime logic is seriously flawed.
+// an end time gets set by the completion of each gcode
+// and so a few milliseconds later, during another gcode
+// the steppers get turned off.
+//
+// This is really hard to understand.  What is a "cycle"?
+// cycle_stop can happen when the system executes gcodes
+// faster than they are sent to the main_loop.
+//
+// It would seem that idleEndTime should be cleared upon receiving any gcode
+// and/or "pushed back" as cycles "complete".
+
 void protocol_do_cycle_stop() {
     rtCycleStop = false;
+
+    #if DEBUG_IDLE_DISABLE
+        log_debug("protocol_do_cycle_stop()");
+    #endif
 
     protocol_disable_steppers();
 

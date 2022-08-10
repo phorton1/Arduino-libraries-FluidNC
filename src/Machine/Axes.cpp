@@ -1,3 +1,12 @@
+#define DEBUG_STEPPERS_DISABLED 0
+
+#if DEBUG_STEPPERS_DISABLED
+    // sets a globally visable boolean to the disabled state
+    // for debugging (see gApp.cpp that draws red/green box based on this)
+    volatile bool debug_steppers_disabled = 0;
+#endif
+
+
 #include "Axes.h"
 
 #include "../Motors/MotorDriver.h"
@@ -58,6 +67,9 @@ namespace Machine {
         }
 
         _sharedStepperDisable.synchronousWrite(disable);
+        #if DEBUG_STEPPERS_DISABLED
+            debug_steppers_disabled = disable;
+        #endif
     }
 
     // Put the motors in the given axes into homing mode, returning a

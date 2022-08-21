@@ -278,31 +278,54 @@ namespace WebUI {
         if ((path.length() > 0) && (path[0] != '/')) {
             path = "/" + path;
         }
+
+        log_info("runLocalFile(" << path << ") started");
+
+        // prh - these errors are not reported to,
+        // or do not show up, in the webUI ?!?!?
+
         if (!SPIFFS.exists(path)) {
+            log_debug("No such local file!");
             webPrintln("Error: No such file!");
             return Error::FsFileNotFound;
         }
         File currentfile = SPIFFS.open(path, FILE_READ);
         if (!currentfile) {  //if file open success
+            log_debug("Could not open local file!");
             return Error::FsFailedOpenFile;
         }
-        //until no line in file
+
+        // prh - this is completely bogus,
+        // another protocol loop ?!?
+        // and even then, no real time checks,
+        // bad error checking, and used to continue after
+        // errors.
+
         Error  err;
         Error  accumErr = Error::Ok;
         Print& out      = webresponse ? *webresponse : allClients;
         while (currentfile.available()) {
             String currentline = currentfile.readStringUntil('\n');
-            if (currentline.length() > 0) {
+
+            // log_debug("run: " << currentline);
+
+            if (currentline.length() > 0)
+            {
                 uint8_t line[256];
                 currentline.getBytes(line, 255);
                 err = execute_line((char*)line, out, auth_level);
-                if (err != Error::Ok) {
-                    accumErr = err;
-                }
                 COMMANDS::wait(1);
+
+                if (err != Error::Ok)
+                {
+                    accumErr = err;
+                    break;
+                }
+
             }
         }
         currentfile.close();
+        log_info("runLocalFile(" << path << ") finished");
         return accumErr;
     }
 
